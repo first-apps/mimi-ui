@@ -12,8 +12,96 @@ Four documents in `docs/`:
 - **[Definition of done](./docs/DEFINITION_OF_DONE.md)** — the checklist that gates "this component is ready to ship."
 - **[Internal architecture](./docs/INTERNAL_ARCHITECTURE.md)** — design-system internals for maintainers (styling flow, etc.).
 - **[Multi-Framework Integration plan](./docs/INTEGRATION.md)** — how mimi-ui ships to React, Angular, and Vue consumers.
+- **[Plain usage](./docs/PLAIN_USAGE.md)** — how to use mimi-ui today via native custom elements (no wrappers required).
 
 The rest of this README is project-level orientation: structure, scripts, setup, architectural overview, scope.
+
+---
+
+## Usage
+
+`@first-apps/mimi-ui` exposes typed framework entrypoints. Pick the subpath that matches
+your stack — every entrypoint is a regular import, no bundler plugin needed.
+
+> Currently shipping: vanilla web-components (`@first-apps/mimi-ui`). For
+> today's React/Vue/Angular usage with native custom elements, see
+> [Plain usage](./docs/PLAIN_USAGE.md).
+
+### Plain HTML
+
+```html
+<script type="module">
+  import '@first-apps/mimi-ui'; // registers <m-button>
+</script>
+
+<m-button variant="primary" size="md">Save changes</m-button>
+```
+
+### React 18+
+
+```tsx
+import { MButton } from '@first-apps/mimi-ui/react';
+
+export function SaveButton() {
+  const onClick = () => {
+    // …
+  };
+
+  return (
+    <MButton variant="primary" onClick={onClick}>
+      Save
+    </MButton>
+  );
+}
+```
+
+### Vue 3.4+
+
+```vue
+<script setup lang="ts">
+import { MButton } from '@first-apps/mimi-ui/vue';
+
+function onSave() {
+  // …
+}
+</script>
+
+<template>
+  <MButton variant="primary" @click="onSave">Save</MButton>
+</template>
+```
+
+### Angular 18+
+
+```ts
+import { Component } from '@angular/core';
+import { MButton } from '@first-apps/mimi-ui/angular';
+
+@Component({
+  selector: 'app-save',
+  standalone: true,
+  template: `<m-button variant="primary" (click)="onSave()">Save</m-button>`,
+})
+export class SaveComponent {
+  onSave() {
+    // …
+  }
+}
+```
+
+### Svelte 5
+
+```svelte
+<script lang="ts">
+  import { MButton } from '@first-apps/mimi-ui/svelte';
+
+  function onSave() {
+    // …
+  }
+</script>
+
+<MButton variant="primary" onclick={onSave}>Save</MButton>
+```
 
 ---
 

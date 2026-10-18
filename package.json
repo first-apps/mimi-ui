@@ -1,30 +1,62 @@
 {
   "name": "@first-apps/mimi-ui",
-  "private": true,
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Reusable web components across JavaScript frameworks",
   "type": "module",
+  "license": "MIT",
+  "author": "@dikshit-n",
+  "homepage": "https://github.com/first-apps/mimi-ui#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/first-apps/mimi-ui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/first-apps/mimi-ui/issues"
+  },
+  "keywords": [
+    "web-components",
+    "custom-elements",
+    "lit",
+    "lit-element",
+    "typescript",
+    "design-system",
+    "ui",
+    "mimi",
+    "mimi-ui",
+    "react",
+    "angular",
+    "vue",
+    "svelte"
+  ],
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "main": "./dist/mimi-ui.cjs.js",
+  "module": "./dist/mimi-ui.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/mimi-ui.es.js",
+      "require": "./dist/mimi-ui.cjs.js",
+      "default": "./dist/mimi-ui.es.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
     "storybook": "storybook dev -p 6006",
-    "build:storybook": "storybook build"
+    "build:storybook": "storybook build",
+    "prepublishOnly": "npm test && npm run build"
   },
-  "keywords": [
-    "web-components",
-    "reusable-components",
-    "lit-element",
-    "typescript",
-    "lit",
-    "mimi",
-    "mimi-ui",
-    "react",
-    "angular",
-    "vue"
-  ],
-  "author": "@dikshit-n",
   "dependencies": {
     "lit": "^3.2.0"
   },
@@ -34,11 +66,13 @@
     "@storybook/addon-docs": "^10.6.2",
     "@storybook/web-components-vite": "^10.6.2",
     "@types/node": "^26.6.5",
+    "@typescript/typescript6": "^6.0.2",
     "happy-dom": "^21.0.3",
     "sass": "^1.105.2",
     "storybook": "^10.6.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
+    "vite-plugin-dts": "^5.1.2",
     "vitest": "^5.0.5"
   }
 }
