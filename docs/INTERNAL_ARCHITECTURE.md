@@ -90,3 +90,9 @@ consumer-override → public-property → SASS-token. A consumer retheme is
 just setting `--m-public` on any ancestor — CSS custom-property inheritance
 carries the value into the shadow root, the alias re-resolves, and every
 rule referencing it updates. No source edit, no rebuild.
+
+## Linting
+
+## npm publish
+
+## Build (for plain, react, vue and other frameworks)

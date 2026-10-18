@@ -1,6 +1,8 @@
 # mimi-ui
 
-Framework-agnostic UI primitives built with [Lit](https://lit.dev) and native Web Components. Consumes cleanly from React, Angular, Vue, and any framework that supports custom elements. Zero runtime dependencies beyond `lit`.
+Reusable web components across JavaScript frameworks.
+
+This package is built with [Lit](https://lit.dev)
 
 ---
 

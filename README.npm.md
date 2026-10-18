@@ -1,13 +1,14 @@
 # mimi-ui
 
-Framework-agnostic UI primitives built with [Lit](https://lit.dev) and
-native Web Components. Consumes cleanly from React, Angular, Vue, and any
-framework that supports custom elements. Zero runtime dependencies beyond
-`lit`.
+Reusable web components across JavaScript frameworks.
 
 [![npm version](https://img.shields.io/npm/v/@first-apps/mimi-ui.svg)](https://www.npmjs.com/package/@first-apps/mimi-ui)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/first-apps/mimi-ui/blob/master/LICENSE)
 [![GitHub](https://img.shields.io/badge/github-first--apps%2Fmimi--ui-blue.svg)](https://github.com/first-apps/mimi-ui)
+
+This package is built with [Lit](https://lit.dev).
+
+---
 
 ## Install
 
@@ -17,7 +18,7 @@ npm install @first-apps/mimi-ui
 
 ## Usage
 
-mimi-ui exposes typed framework entrypoints. Pick the subpath that
+`@first-apps/mimi-ui` exposes typed framework entrypoints. Pick the subpath that
 matches your stack — every entrypoint is a regular import, no bundler
 plugin needed.
 
