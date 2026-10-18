@@ -91,20 +91,6 @@ export class SaveComponent {
 }
 ```
 
-### Svelte 5
-
-```svelte
-<script lang="ts">
-  import { MButton } from '@first-apps/mimi-ui/svelte';
-
-  function onSave() {
-    // …
-  }
-</script>
-
-<MButton variant="primary" onclick={onSave}>Save</MButton>
-```
-
 ---
 
 ## Project structure
@@ -174,8 +160,10 @@ The `composed: true` flag on every dispatched event is what makes this work — 
 | `npm run test:watch` | Re-run tests on file change. Use during development. |
 | `npm run storybook` | Storybook at `http://localhost:6006`. Component explorer + a11y checks. |
 | `npm run build:storybook` | Static Storybook build for deploy (Chromatic, Netlify, etc.). |
-
-Add `npm run lint` and `npm run format` when you wire ESLint + Prettier — the rest of the tooling is intentionally minimal until you have a team convention to follow.
+| `npm run lint` | Checks for lint errors
+| `npm run lint:fix`| Fixes lint errors
+| `npm run format`| Checks for code formatting errors
+| `npm run format:fix`| Fixes code formatting errors
 
 ---
 
@@ -223,6 +211,61 @@ npm run build         # emits dist/mimi-ui.es.js + dist/mimi-ui.cjs.js
 ```
 
 The bundle is tree-shakeable — consumers only ship the components they import.
+
+---
+
+## Environments
+
+This package is built in two environments. Both are **author-side** — the
+files described here are bundled into the published library at build time
+and never reach consumers at runtime.
+
+| Environment | Purpose | Output | Minified | Sourcemaps |
+|---|---|---|---|---|
+| `dev` | Smoke-test the package output locally | `dist-dev/` | no | full |
+| `prod` | Publish to npm (default for `npm run build`) | `dist/` | yes | hidden |
+
+### Files
+
+- `.env.development` — defaults baked into the dev bundle (committed).
+- `.env.production` — defaults baked into the prod bundle (committed).
+- `.env.example` — template. Copy to `.env.local` to override for your machine.
+- `.env.local` / `.env.*.local` — personal overrides; ignored by git.
+- `src/config/env.ts` — the only place components read env values. Imports
+  the typed `import.meta.env` augmentation from `src/vite-env.d.ts`.
+
+### Commands
+
+```bash
+npm run dev          # build Storybook static + Run storybook dev server with HMR (6006)
+npm run build        # prod build → dist/
+npm run build:dev    # dev build → dist-dev/  (unminified, full sourcemaps)
+npm run preview      # build Storybook static + serve on http://localhost:6007
+npm run clean        # remove dist/, dist-dev/, storybook-static/
+```
+
+`prepublishOnly` runs `lint && test && build` (the prod build), so a
+mistaken `npm publish` while in `dev` mode is gated correctly.
+
+### Switching environments
+
+Override any value for a single command without editing files:
+
+```bash
+VITE_BUILD_ENV=production VITE_SHOW_DEV_WARNINGS=false npm run build:dev
+```
+
+Vite also reads mode from the `--mode` flag, which the scripts above set
+explicitly — the value in `.env.<mode>` is the default, not the
+authoritative source. To change defaults, edit the `.env.<mode>` file
+or add a personal `.env.local`.
+
+### Library-consumer note
+
+Consumers of `@first-apps/mimi-ui` do **not** ship these env files.
+Whatever value these files hold at our `npm run build` time is frozen
+into the bundle they import. If you ever need per-app configuration,
+expose a component `prop` instead of reaching for a `VITE_*` variable.
 
 ---
 

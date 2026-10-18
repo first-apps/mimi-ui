@@ -49,11 +49,14 @@
     "access": "public"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "npm run build:storybook && storybook dev -p 6006",
+    "build": "tsc && vite build --mode production",
+    "build:dev": "tsc && vite build --mode development --outDir dist-dev",
+    "build:prod": "tsc && vite build --mode production",
+    "preview": "npm run build:storybook && vite preview --outDir storybook-static --port 6007 --strictPort",
+    "clean": "rm -rf dist dist-dev storybook-static",
     "test": "vitest run",
     "test:watch": "vitest",
-    "storybook": "storybook dev -p 6006",
     "build:storybook": "storybook build",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",

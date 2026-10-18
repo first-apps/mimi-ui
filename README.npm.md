@@ -88,20 +88,6 @@ export class SaveComponent {
 }
 ```
 
-### Svelte 5
-
-```svelte
-<script lang="ts">
-  import { MButton } from '@first-apps/mimi-ui/svelte';
-
-  function onSave() {
-    // …
-  }
-</script>
-
-<MButton variant="primary" onclick={onSave}>Save</MButton>
-```
-
 ---
 
 [MIT licensed](https://github.com/first-apps/mimi-ui/blob/master/LICENSE) © 2026 mimi-ui contributors · [GitHub repo →](https://github.com/first-apps/mimi-ui)

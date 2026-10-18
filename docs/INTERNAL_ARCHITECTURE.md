@@ -200,13 +200,13 @@ that's what npmjs.com renders.
 the consumer uses `import` or `require`. TypeScript picks up the `.d.ts`
 files through the `types` condition.
 
-## Build Architecture
+## Project Build Architecture
 
 How a single TS source produces a framework-agnostic artifact that
 consumers can import from any framework that supports Custom Elements.
 
 ```
-                  MIMI-UI — BUILD ARCHITECTURE
+               MIMI-UI — PROJECT BUILD ARCHITECTURE
 ══════════════════════════════════════════════════════════════════════════
 
   1. SOURCE

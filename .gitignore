@@ -1,5 +1,12 @@
 node_modules/
 .DS_Store
 dist
+dist-dev
 storybook-static
 **.tgz
+
+# Local environment overrides — copy .env.example to .env.local and edit.
+# Committed defaults are .env.development / .env.production (no secrets).
+.env
+.env.local
+.env.*.local
