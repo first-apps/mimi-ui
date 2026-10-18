@@ -54,7 +54,7 @@ If the component participates in forms, set `static formAssociated = true`
 and call `attachInternals()` in the constructor. Then **use** the internals:
 
 - `formDisabledCallback` — sync reactive state (see
-  [§2 Reactive state is the source of truth](#2-reactive-state-is-the-source-of-truth)).
+  [Section 2 Reactive state is the source of truth](#2-reactive-state-is-the-source-of-truth)).
 - `formResetCallback` — clear internal state on form reset (no-op is OK, but
   declare it so the lifecycle is complete and future state has a hook).
 - **Submit / reset forwarding** in `_handleClick` — so every activation path

@@ -14,6 +14,7 @@
   },
   "keywords": [
     "web-components",
+    "reusable-components",
     "lit-element",
     "typescript",
     "lit",
@@ -23,7 +24,7 @@
     "angular",
     "vue"
   ],
-  "author": "@first-apps",
+  "author": "@dikshit-n",
   "dependencies": {
     "lit": "^3.2.0"
   },

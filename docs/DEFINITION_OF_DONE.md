@@ -65,7 +65,7 @@
 - [ ] `name`/`value` either forwarded to the inner button **or** registered
       via `setFormValue` — never both (avoid FormData duplicates).
 
-## Tests (per [§9 Testing](./COMPONENT_STANDARDS.md#9-testing))
+## Tests (per [Section 9 Testing](./COMPONENT_STANDARDS.md#9-testing))
 
 - [ ] Custom-element registration assertion.
 - [ ] Reflection assertion for every reflected prop.

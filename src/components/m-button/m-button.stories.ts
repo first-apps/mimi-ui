@@ -30,7 +30,7 @@ const meta: Meta<ButtonArgs> = {
     tags: ['autodocs'],
     parameters: {
         // a11y panel gets noisy if it complains about color contrast on
-        // every variant — explicit policy in docs/COMPONENT_STANDARDS.md §6:
+        // every variant — explicit policy in docs/COMPONENT_STANDARDS.md Section 6:
         // focus rings via `:focus-visible`, real <button> under the hood,
         // aria-busy on loading. axe checks all of those.
         docs: {

@@ -20,7 +20,7 @@ The rest of this README is project-level orientation: structure, scripts, setup,
 ## Project structure
 
 ```
-lit-ui/
+mimi-ui/
 ├── docs/
 │   ├── COMPONENT_STANDARDS.md    # Engineering fundamentals
 │   └── DEFINITION_OF_DONE.md     # Component-completion checklist
@@ -47,8 +47,8 @@ lit-ui/
 ```
 
 **Component folder is portable.** Each `m-<name>/` folder is self-contained: logic, styles, tests, and stories live together. Tokens and mixins are global; components `@use` them by path. See
-[§1 File structure](./docs/COMPONENT_STANDARDS.md#1-file-structure) and
-[§5 Theming](./docs/COMPONENT_STANDARDS.md#5-theming-public-internal-scss-fallback) for the conventions.
+[Section 1 File structure](./docs/COMPONENT_STANDARDS.md#1-file-structure) and
+[Section 5 Theming](./docs/COMPONENT_STANDARDS.md#5-theming-public-internal-scss-fallback) for the conventions.
 
 ---
 
@@ -60,8 +60,8 @@ Every component is a single class extending `LitElement` registered with `@custo
 
 | Layer | Mechanism | Purpose |
 |---|---|---|
-| **Inputs** | `@property` decorated fields | Reactive public API; reflected to HTML attributes where the standard requires (see [§4 Variants](./docs/COMPONENT_STANDARDS.md#4-variants-on-the-host-not-inner-classes)) |
-| **Outputs** | `CustomEvent` with `composed: true, bubbles: true` | Cross Shadow DOM boundaries; consumable from any framework (see [§7 Events](./docs/COMPONENT_STANDARDS.md#7-events)) |
+| **Inputs** | `@property` decorated fields | Reactive public API; reflected to HTML attributes where the standard requires (see [Section 4 Variants](./docs/COMPONENT_STANDARDS.md#4-variants-on-the-host-not-inner-classes)) |
+| **Outputs** | `CustomEvent` with `composed: true, bubbles: true` | Cross Shadow DOM boundaries; consumable from any framework (see [Section 7 Events](./docs/COMPONENT_STANDARDS.md#7-events)) |
 | **Composition** | Named + default slots | Light-DOM children projected into the Shadow DOM |
 
 ### Cross-framework consumption
@@ -98,8 +98,8 @@ Add `npm run lint` and `npm run format` when you wire ESLint + Prettier — the 
 **From scratch**
 
 ```bash
-git clone <repo-url> lit-ui
-cd m-ui
+git clone <repo-url> mimi-ui
+cd mimi-ui
 npm install
 ```
 
@@ -129,7 +129,7 @@ Open `http://localhost:6006`. The a11y tab in each story's panel runs axe-core a
 **Build for production**
 
 ```bash
-npm run build         # emits dist/m-ui.es.js + dist/m-ui.cjs.js
+npm run build         # emits dist/mimi-ui.es.js + dist/mimi-ui.cjs.js
 ```
 
 The bundle is tree-shakeable — consumers only ship the components they import.
