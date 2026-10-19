@@ -37,6 +37,10 @@ jobs:
     env:
       # NPM_TOKEN (granular or classic) is the publish credential for now.
       # OIDC trusted publishing is deferred until Node ≥ 22.14 is adopted.
+      # NOTE: actions/setup-node@v4 reads this env var and writes the
+      # _authToken line into the runner's ~/.npmrc; the registry-url
+      # input below tells setup-node which registry to write — without
+      # it, npm publish on Node 20 fails with "need auth".
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     steps:
@@ -50,6 +54,12 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          # registry-url makes setup-node write the npm registry URL and
+          # the _authToken line (sourced from NODE_AUTH_TOKEN) to the
+          # runner's .npmrc. Without this, npm publish on Node 20 fails
+          # with `npm error need auth` even when NODE_AUTH_TOKEN is set —
+          # npm CLI does not pick up the env var alone on Node 20.
+          registry-url: https://registry.npmjs.org/
 
       - name: Install
         run: npm ci
