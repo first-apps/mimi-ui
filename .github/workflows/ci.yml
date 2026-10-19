@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  pull_request: {}
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+# contents: write is required for the peaceiris/actions-gh-pages@v4 step
+# that pushes storybook-static/ to the `storybook` branch.
+# id-token: write is intentionally NOT granted yet — npm Trusted Publishing
+# (OIDC) is deferred until the project moves to Node ≥ 22.14 (see
+# AGENTS.md 2026-10-19 entries). Until then the publish step authenticates
+# via the NPM_TOKEN secret exported as NODE_AUTH_TOKEN below.
+permissions:
+  contents: write
+
+# Cancel superseded PR runs (cheap lint/format/test can restart).
+# Master pushes are NEVER cancelled — a half-finished `npm publish`
+# cannot be safely rolled back at the registry.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  pipeline:
+    name: lint → format → test → publish → storybook
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # GitHub Deployment environment — declared once here so any rules,
+    # required reviewers, or environment-scoped secrets configured in
+    # Settings → Environments → `production` apply to the master push
+    # automatically. One-time admin step by the project admin.
+    environment: production
+
+    env:
+      # NPM_TOKEN (granular or classic) is the publish credential for now.
+      # OIDC trusted publishing is deferred until Node ≥ 22.14 is adopted.
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          show-progress: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Pipeline mandates: lint → format → test (all branches)
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format
+
+      - name: Test
+        run: npm run test
+
+      # Master-only tail: publish + storybook deploy
+      - name: Publish to npm
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: npm publish --access public
+        # prepublishOnly runs sync-readme first, then lint, test, build.
+
+      - name: Build Storybook
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: npm run build:storybook
+
+      - name: Publish Storybook to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./storybook-static
+          publish_branch: storybook
+          keep_history: true
+          user_name: github-actions[bot]
+          user_email: github-actions[bot@users.noreply.github.com]
