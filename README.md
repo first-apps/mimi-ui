@@ -1,10 +1,37 @@
-# mimi-ui
+<div align="center">
 
-Reusable web components across JavaScript frameworks.
+  <img
+    src="https://raw.githubusercontent.com/first-apps/mimi-ui/refs/heads/assets/images/mimi-ui-banner.png"
+    alt="mimi-ui banner"
+    width="100%"
+  />
 
-This package is built with [Lit](https://lit.dev)
+  <h3>Mimi UI</h3>
 
----
+  <p>Reusable web components across any JavaScript framework.</p>
+
+  <p>
+    A lightweight, customizable, and accessible component library
+    powered by <a href="https://lit.dev">Lit</a>.
+  </p>
+
+  <p>
+    <a href="https://lit.dev/" target="_blank">
+      <img src="https://img.shields.io/badge/Lit-Web%20Components-324FFF?style=flat-square" alt="Lit" />
+    </a>&nbsp;
+    <a href="https://github.com/first-apps/mimi-ui/blob/master/LICENSE" target="_blank">
+      <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License" />
+    </a>&nbsp;
+    <a href="https://first-apps.github.io/mimi-ui/" target="_blank">
+      <img
+        src="https://img.shields.io/badge/Explore-Storybook-FF4785?style=flat-square"
+        alt="Explore Mimi UI Storybook"
+      />
+    </a>
+
+  </p>
+
+</div>
 
 ## Documentation
 
@@ -24,6 +51,18 @@ The rest of this README is project-level orientation: structure, scripts, setup,
 
 `@first-apps/mimi-ui` exposes typed framework entrypoints. Pick the subpath that matches
 your stack — every entrypoint is a regular import, no bundler plugin needed.
+
+### Detailed Usage Examples
+<div align="left">
+  <p align="left">
+    <a href="https://first-apps.github.io/mimi-ui/" target="_blank">
+      <img
+        src="https://img.shields.io/badge/Explore-Storybook-FF4785?style=for-the-badge"
+        alt="Explore Mimi UI Storybook"
+      />
+    </a>
+  </p>
+</div>
 
 > Currently shipping: vanilla web-components (`@first-apps/mimi-ui`). For
 > today's React/Vue/Angular usage with native custom elements, see
