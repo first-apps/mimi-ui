@@ -1,12 +1,48 @@
-# mimi-ui
+<div align="center">
 
-Reusable web components across JavaScript frameworks.
+  <img
+    src="https://raw.githubusercontent.com/first-apps/mimi-ui/refs/heads/assets/images/mimi-ui-banner.png"
+    alt="mimi-ui banner"
+    width="100%"
+  />
 
-[![npm version](https://img.shields.io/npm/v/@first-apps/mimi-ui.svg)](https://www.npmjs.com/package/@first-apps/mimi-ui)
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/first-apps/mimi-ui/blob/master/LICENSE)
-[![GitHub](https://img.shields.io/badge/github-first--apps%2Fmimi--ui-blue.svg)](https://github.com/first-apps/mimi-ui)
+  <h3>Mimi UI</h3>
 
-This package is built with [Lit](https://lit.dev).
+  <p>Reusable web components across any JavaScript framework.</p>
+
+  <p>
+    A lightweight, customizable, and accessible component library
+    powered by <a href="https://lit.dev">Lit</a>.
+  </p>
+
+  <p>
+    <a href="https://www.npmjs.com/package/@first-apps/mimi-ui/" target="_blank">
+      <img
+        src="https://img.shields.io/npm/v/@first-apps/mimi-ui.svg"
+        alt="NPM version"
+      />
+    </a>&nbsp;
+    <a href="https://lit.dev/" target="_blank">
+      <img src="https://img.shields.io/badge/Lit-Web%20Components-324FFF" alt="Lit" />
+    </a>&nbsp;
+    <a href="https://github.com/first-apps/mimi-ui/blob/master/LICENSE" target="_blank">
+      <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License" />
+    </a>&nbsp;
+    <a href="https://first-apps.github.io/mimi-ui/" target="_blank">
+      <img
+        src="https://img.shields.io/badge/Explore-Storybook-FF4785"
+        alt="Explore Mimi UI Storybook"
+      />
+    </a>&nbsp;
+    <a href="https://github.com/first-apps/mimi-ui/" target="_blank">
+      <img
+        src="https://img.shields.io/badge/github-first--apps%2Fmimi--ui-blue.svg"
+        alt="Github repo"
+      />
+    </a>
+  </p>
+
+</div>
 
 ---
 

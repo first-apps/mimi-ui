@@ -15,20 +15,25 @@
     powered by <a href="https://lit.dev">Lit</a>.
   </p>
 
-  <p>
+   <p>
+    <a href="https://www.npmjs.com/package/@first-apps/mimi-ui/" target="_blank">
+      <img
+        src="https://img.shields.io/npm/v/@first-apps/mimi-ui.svg"
+        alt="NPM version"
+      />
+    </a>&nbsp;
     <a href="https://lit.dev/" target="_blank">
-      <img src="https://img.shields.io/badge/Lit-Web%20Components-324FFF?style=flat-square" alt="Lit" />
+      <img src="https://img.shields.io/badge/Lit-Web%20Components-324FFF" alt="Lit" />
     </a>&nbsp;
     <a href="https://github.com/first-apps/mimi-ui/blob/master/LICENSE" target="_blank">
-      <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License" />
+      <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License" />
     </a>&nbsp;
     <a href="https://first-apps.github.io/mimi-ui/" target="_blank">
       <img
-        src="https://img.shields.io/badge/Explore-Storybook-FF4785?style=flat-square"
+        src="https://img.shields.io/badge/Explore-Storybook-FF4785"
         alt="Explore Mimi UI Storybook"
       />
     </a>
-
   </p>
 
 </div>
