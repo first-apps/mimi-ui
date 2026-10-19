@@ -58,6 +58,18 @@ npm install @first-apps/mimi-ui
 matches your stack — every entrypoint is a regular import, no bundler
 plugin needed.
 
+### Detailed Usage Examples
+<div align="left">
+  <p align="left">
+    <a href="https://first-apps.github.io/mimi-ui/" target="_blank">
+      <img
+        src="https://img.shields.io/badge/Explore-Storybook-FF4785?style=for-the-badge"
+        alt="Explore Mimi UI Storybook"
+      />
+    </a>
+  </p>
+</div>
+
 > Currently shipping: vanilla web-components (`@first-apps/mimi-ui`). For
 > today's React/Vue/Angular usage with native custom elements, see
 > [Plain usage](https://github.com/first-apps/mimi-ui/blob/master/docs/PLAIN_USAGE.md).
