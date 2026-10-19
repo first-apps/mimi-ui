@@ -17,7 +17,7 @@
 
 ## Current state
 
-- Source exports `MButton`, `MCounter`, `MClock` from `src/index.ts` (vanilla only).
+- Source exports `MButton` and other components from `src/index.ts` (vanilla only).
 - `vite build` already runs in library mode and emits ES + CJS to `dist/` (7.24 kB ES / 6.76 kB CJS).
 - `package.json` is `private: true`. No `main`/`module`/`types`/`exports`/`files`/`sideEffects`. Not publishable.
 - No `custom-elements.json`. No framework wrappers. No published type declarations.
@@ -166,7 +166,7 @@ mimi-ui ships an optional `vue/index.ts` exporting typed `defineCustomElement` p
 
 ```ts
 import { defineCustomElement } from 'vue';
-import { MButtonEl } from '@first-apps/mimi-ui';
+import { MButton as MButtonEl } from '@first-apps/mimi-ui';
 
 export const MButton = defineCustomElement({ 'm-button': MButtonEl });
 ```

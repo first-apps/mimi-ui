@@ -8,7 +8,7 @@ This package is built with [Lit](https://lit.dev)
 
 ## Documentation
 
-Four documents in `docs/`:
+Five documents in `docs/`:
 
 - **[Component standards](./docs/COMPONENT_STANDARDS.md)** — engineering fundamentals: reactive state, form-association internals, theming, a11y, events, performance, testing, Storybook.
 - **[Definition of done](./docs/DEFINITION_OF_DONE.md)** — the checklist that gates "this component is ready to ship."
@@ -97,29 +97,42 @@ export class SaveComponent {
 
 ```
 mimi-ui/
+├── .env.development             # Dev defaults baked into the dev bundle (committed)
+├── .env.production              # Prod defaults baked into the prod bundle (committed)
+├── .env.example                 # Template — copy to .env.local to override
+├── .storybook/
+│   └── main.ts                  # Storybook config (web-components-vite, a11y + docs addons)
+├── AGENTS.md                    # Project memory for AI agents
+├── biome.json                   # Lint/format config (Biome 2)
 ├── docs/
-│   ├── COMPONENT_STANDARDS.md    # Engineering fundamentals
-│   └── DEFINITION_OF_DONE.md     # Component-completion checklist
+│   ├── COMPONENT_STANDARDS.md   # Engineering fundamentals — the *why*
+│   ├── DEFINITION_OF_DONE.md    # Component-completion checklist — the gate
+│   ├── INTERNAL_ARCHITECTURE.md # Design-system internals for maintainers
+│   ├── INTEGRATION.md           # Cross-framework distribution roadmap
+│   └── PLAIN_USAGE.md           # Today's working code (native custom elements)
+├── LICENSE                      # MIT
+├── README.md                    # GitHub-rendered repo orientation (this file)
+├── README.npm.md                # npm-rendered readme (set via package.json `readme`)
+├── package.json
 ├── src/
 │   ├── components/
-│   │   ├── m-counter/              # Reference: Lit primitives, a11y, events
-│   │   │   ├── m-counter.ts
-│   │   │   ├── m-counter.test.ts
-│   │   │   └── m-counter.stories.ts
-│   │   └── m-button/               # Production template: SASS, theming,
-│   │       │                        #   form-association, slots, a11y
+│   │   └── m-button/              # Production template: SASS, theming,
+│   │       │                       #   form-association, slots, a11y
 │   │       ├── m-button.ts
 │   │       ├── m-button.scss
 │   │       ├── m-button.test.ts
 │   │       └── m-button.stories.ts
+│   ├── config/
+│   │   ├── env.ts                 # Single env accessor (only place components read env)
+│   │   └── index.ts               # Re-exports
 │   ├── styles/
-│   │   ├── _tokens.scss             # Design tokens (color, space, radius, motion)
-│   │   └── _mixins.scss             # Reusable SASS mixins
-│   └── index.ts                     # Public package entry — re-exports all components
+│   │   ├── _tokens.scss           # Design tokens (color, space, radius, motion)
+│   │   └── _mixins.scss           # Reusable SASS mixins
+│   ├── index.ts                   # Public package entry — re-exports all components
+│   └── vite-env.d.ts              # ImportMetaEnv augmentation
 ├── tsconfig.json
 ├── vite.config.ts
-├── vitest.setup.ts
-└── package.json
+└── vitest.setup.ts
 ```
 
 **Component folder is portable.** Each `m-<name>/` folder is self-contained: logic, styles, tests, and stories live together. Tokens and mixins are global; components `@use` them by path. See
@@ -154,16 +167,19 @@ The `composed: true` flag on every dispatched event is what makes this work — 
 
 | Command | Purpose |
 |---|---|
-| `npm run dev` | Vite dev server with HMR. Edit a component, see it live. |
+| `npm run dev` | Storybook dev server with HMR on port `6006`. Runs `build:storybook` first, then `storybook dev -p 6006`. |
 | `npm run build` | Type-check (`tsc`) + production bundle to `dist/` as ES + CJS. |
+| `npm run build:dev` | Type-check + dev bundle to `dist-dev/`. Unminified, full sourcemaps. |
+| `npm run build:prod` | Alias for `build`. Use when you want the script name to read "prod" instead of "build". |
+| `npm run preview` | Builds Storybook static and serves it on `http://localhost:6007` for review. |
 | `npm run test` | Run the full Vitest suite once. |
 | `npm run test:watch` | Re-run tests on file change. Use during development. |
-| `npm run storybook` | Storybook at `http://localhost:6006`. Component explorer + a11y checks. |
 | `npm run build:storybook` | Static Storybook build for deploy (Chromatic, Netlify, etc.). |
-| `npm run lint` | Checks for lint errors
-| `npm run lint:fix`| Fixes lint errors
-| `npm run format`| Checks for code formatting errors
-| `npm run format:fix`| Fixes code formatting errors
+| `npm run lint` | Check for lint errors (Biome). |
+| `npm run lint:fix` | Fix lint errors (Biome). |
+| `npm run format` | Check for code formatting errors (Biome). |
+| `npm run format:fix` | Fix code formatting errors (Biome). |
+| `npm run clean` | Remove `dist/`, `dist-dev/`, `storybook-static/`. |
 
 ---
 
@@ -199,7 +215,7 @@ npm run test:watch    # watch mode
 **Run Storybook**
 
 ```bash
-npm run storybook
+npm run dev
 ```
 
 Open `http://localhost:6006`. The a11y tab in each story's panel runs axe-core against the rendered component and surfaces violations.
@@ -234,13 +250,13 @@ and never reach consumers at runtime.
 - `src/config/env.ts` — the only place components read env values. Imports
   the typed `import.meta.env` augmentation from `src/vite-env.d.ts`.
 
-### Commands
+### Goto Commands
 
 ```bash
-npm run dev          # build Storybook static + Run storybook dev server with HMR (6006)
+npm run dev          # Storybook dev server with HMR on port 6006
 npm run build        # prod build → dist/
 npm run build:dev    # dev build → dist-dev/  (unminified, full sourcemaps)
-npm run preview      # build Storybook static + serve on http://localhost:6007
+npm run preview      # Storybook static + serve on http://localhost:6007
 npm run clean        # remove dist/, dist-dev/, storybook-static/
 ```
 
@@ -281,5 +297,5 @@ Use `m-button` as the working template — it implements every convention in the
 
 - **No CSS-in-JS.** SASS + CSS custom properties handle theming with zero runtime cost.
 - **No state management.** Components are stateless inputs → events. Consumers own state.
-- **No build-time framework wrappers yet.** The path is `custom-elements-manifest` analyzer → generate React/Vue wrappers from the manifest. Set that up once you have ≥ 5 components and a concrete consumer asking for it.
+- **No build-time framework wrappers yet.** The path is documented in [Multi-Framework Integration plan](./docs/INTEGRATION.md): multi-entry Vite library build + `@lit/react` for React + Angular type augmentation + Vue `defineCustomElement`. Track progress there.
 - **No monorepo.** Single package until a second consumer (React app, Angular app, Vue app) lives in the same repo. Split then with npm workspaces.
