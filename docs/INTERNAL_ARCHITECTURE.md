@@ -212,7 +212,7 @@ How `master` reaches the public Storybook at
   ──────                       ───────────────────                  ────────────
                                                               ┌────────────────────┐
   ┌────────────────┐   push    ┌──────────────────────────┐    │  Settings → Pages  │
-  │  src/ + .story │ ─────────▶ │  workflow: deploy-story  │    │  Source: gh-pages  │
+  │  src/ + .story │ ─────────▶ │  workflow: deploy-story  │    │  Source: storybook  │
   │  book/main.ts  │            │  book.yml                │    │  Branch: /(root)   │
   │                │  workflow  │                          │    └─────────┬──────────┘
   │                │  _dispatch │  checkout                │              │
@@ -223,13 +223,13 @@ How `master` reaches the public Storybook at
                                 │  peaceiris/              │              │
                                 │    actions-gh-pages@v4   │              │
                                 │    (push ./storybook-     │              │
-                                │    static → gh-pages)    │              │
+                                │    static → storybook)   │              │
                                 └────────────┬─────────────┘              │
                                              │                            │
                                              ▼                            ▼
                                     ┌─────────────────┐         ┌──────────────────────┐
-                                    │  gh-pages branch│         │  first-apps.github.io│
-                                    │  (linear hist.) │ ──────▶ │  /mimi-ui/           │
+                                    │  storybook      │         │  first-apps.github.io│
+                                    │  branch         │ ──────▶ │  /mimi-ui/           │
                                     └─────────────────┘         └──────────────────────┘
 ```
 
@@ -240,14 +240,16 @@ secrets.
 
 **CI side.** `npm ci` then `npm run build:storybook` produce a fresh
 `storybook-static/` on the runner. `peaceiris/actions-gh-pages@v4`
-commits that directory to the `gh-pages` branch with
+commits that directory to the `storybook` branch with
 `keep_history: true`, so successive deploys appear as a tidy linear
-history.
+history. (The action's published name keeps the legacy `gh-pages`
+convention; the destination branch is configurable — we use
+`storybook` to make the branch's purpose self-documenting.)
 
-**Pages side.** GitHub Pages serves `gh-pages` / `(root)` over HTTPS.
+**Pages side.** GitHub Pages serves `storybook` / `(root)` over HTTPS.
 The repo admin sets this once under Settings → Pages; the workflow
 itself doesn't touch Pages settings. If Pages is not yet enabled, the
-push to `gh-pages` still succeeds but the public URL 404s until the
+push to `storybook` still succeeds but the public URL 404s until the
 admin step is done.
 
 **Consumer side.** A consumer opening
