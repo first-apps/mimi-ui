@@ -157,11 +157,14 @@ the npm registry.
        │ prepublishOnly
        │
        ▼
- ┌────────────────┐
- │  npm run lint  │
- │     + test     │
- │     + build    │
- └──┬─────────────┘
+ ┌──────────────────────────────────┐
+ │  scripts/sync-readme.mjs         │
+ │    README.npm.md → README.md     │
+ │  ──────────────────────────────  │
+ │  npm run lint                    │
+ │  + test                          │
+ │  + build                         │
+ └──┬───────────────────────────────┘
     │
     │ npm publish
     │      --access public
@@ -170,7 +173,9 @@ the npm registry.
  │  file to be uploaded │
  │                      │
  │  dist/*.d.ts,        │
- │  README.npm.md       │
+ │  README.md (==       │
+ │    README.npm.md at  │
+ │    publish time),    │
  │  LICENSE             │
  └──┬───────────────────┘
     │
@@ -181,24 +186,48 @@ the npm registry.
                     │       npmjs.com      │
                     │                      │ `npm i`  ┌───────────────────────────────────────────────┐
                     │  @first-apps/mimi-ui │───────→  |  import {} from '@first-apps/mimi-ui/react'   |
-                    │  readme = README.npm │          |  import {} from '@first-apps/mimi-ui/angular' |
-                    └──────────────────────┘          |  import {} from '@first-apps/mimi-ui/vue'     |
-                                                      └───────────────────────────────────────────────┘
+                    │  readme = README.md  │          |  import {} from '@first-apps/mimi-ui/angular' |
+                    │  (= README.npm.md    │          |  import {} from '@first-apps/mimi-ui/vue'     |
+                    │   at publish)        │          └───────────────────────────────────────────────┘
+                    └──────────────────────┘
 ```
 
 **Author side.** A working tree passes the `prepublishOnly` gate
-(lint → test → build). `npm publish --access public` packages the
-`files` allowlist (`dist`, `README.npm.md`, `LICENSE`) plus the
-auto-included `package.json` into a tarball.
+(`node scripts/sync-readme.mjs` → lint → test → build). The sync step
+overwrites the local `README.md` with `README.npm.md`'s content so the
+tarball npm assembles carries the consumer-facing README. The
+modification is transient — neither local `npm publish` nor CI
+publish commits it back to the repo. After the publish, the maintainer
+restores `README.md` from git (`git checkout -- README.md`) as the
+GitHub-facing orientation doc. `npm publish --access public` packages
+the `files` allowlist (`dist`, `LICENSE`) plus the auto-included
+`package.json` into a tarball; `README.md` is included by npm's default
+behaviour and matches `README.npm.md` at the moment of upload.
 
 **Registry side.** npm stores the tarball under the scoped name
-`@first-apps/mimi-ui`. The `readme` field points at `README.npm.md` —
-that's what npmjs.com renders.
+`@first-apps/mimi-ui`. The published `README.md` is the tarball's
+README — i.e. `README.npm.md`'s content at publish time, never the
+GitHub-facing orientation copy. The `package.json#readme` field is
+left in place pointing at `README.npm.md` for tooling that does
+honour it, but it is non-load-bearing (per the AGENTS.md
+2026-10-19 entry — do not "fix" the field).
 
 **Consumer side.** `npm install @first-apps/mimi-ui` resolves the
 `exports` map to the matching ESM or CJS bundle, depending on whether
 the consumer uses `import` or `require`. TypeScript picks up the `.d.ts`
 files through the `types` condition.
+
+**CI side.** On a push to `master`, the master job of
+`.github/workflows/ci.yml` runs lint → format → test → `npm publish` →
+`npm run build:storybook` → `peaceiris/actions-gh-pages@v4`. The
+`npm publish` step's `prepublishOnly` performs the same swap
+automatically; no human action is required. `NPM_TOKEN` (granular or
+classic token) is the publish credential, exported as
+`NODE_AUTH_TOKEN`; OIDC Trusted Publishing is deferred until the
+project moves to Node ≥ 22.14. The storybook step pushes
+`storybook-static/` to the `storybook` branch via
+`peaceiris/actions-gh-pages@v4` using the v4 input
+`publish_branch: storybook` (not the v3 `destination_branch`).
 
 ## Storybook deploy
 
@@ -210,23 +239,27 @@ How `master` reaches the public Storybook at
 
   AUTHOR                       CI (GitHub Actions)                  GITHUB PAGES
   ──────                       ───────────────────                  ────────────
-                                                              ┌────────────────────┐
-  ┌────────────────┐   push    ┌──────────────────────────┐    │  Settings → Pages  │
-  │  src/ + .story │ ─────────▶ │  workflow: deploy-story  │    │  Source: storybook  │
-  │  book/main.ts  │            │  book.yml                │    │  Branch: /(root)   │
-  │                │  workflow  │                          │    └─────────┬──────────┘
-  │                │  _dispatch │  checkout                │              │
-  │                │ ─────────▶ │  setup-node (Node 20)    │              │
-  └────────────────┘            │  npm ci                  │              │
-                                │  npm run build:          │              │
-                                │    storybook             │              │
-                                │  peaceiris/              │              │
-                                │    actions-gh-pages@v4   │              │
+                                                                 ┌────────────────────┐
+  ┌────────────────┐   push     ┌───────────────────────────┐    │  Settings → Pages  │
+  │  src/ + .story │ ─────────▶ │  workflow: ci.yml         │    │  Source: storybook │
+  │  book/main.ts  │            │  (job: pipeline, master   │    │  Branch: /(root)   │
+  │                │  workflow  │   -only steps)            │    └─────────┬──────────┘
+  │                │  _dispatch │  checkout                 │              │
+  │                │ ─────────▶ │  setup-node (Node 20)     │              │
+  └────────────────┘            │  npm ci                   │              │
+                                │  npm run lint             │              │
+                                │  npm run format           │              │
+                                │  npm run test             │              │
+                                │  npm publish              │              │
+                                │  npm run build:storybook  │              │
+                                │                           │              │
+                                │  peaceiris/               │              │
+                                │    actions-gh-pages@v4    │              │
                                 │    (push ./storybook-     │              │
-                                │    static → storybook)   │              │
-                                └────────────┬─────────────┘              │
-                                             │                            │
-                                             ▼                            ▼
+                                │    static → storybook)    │              │
+                                └────────────┬──────────────┘              │
+                                             │                             │
+                                             ▼                             ▼
                                     ┌─────────────────┐         ┌──────────────────────┐
                                     │  storybook      │         │  first-apps.github.io│
                                     │  branch         │ ──────▶ │  /mimi-ui/           │
@@ -234,17 +267,19 @@ How `master` reaches the public Storybook at
 ```
 
 **Author side.** A push to `master` (or a manual `workflow_dispatch`)
-fires `.github/workflows/deploy-storybook.yml`. `contents: write` is
-the only elevated scope; the runner uses `GITHUB_TOKEN`, no long-lived
-secrets.
+fires `.github/workflows/ci.yml`. The job's master-only tail handles
+`npm publish` (with the automated README swap via `prepublishOnly`),
+then `npm run build:storybook`, then the Storybook deploy. The
+pre-PR gate (lint → format → test) runs on every PR and on every
+push to any branch. `contents: write` is the only elevated scope; the
+runner uses `GITHUB_TOKEN` for the storybook branch push and the
+`NPM_TOKEN` secret for `npm publish`.
 
-**CI side.** `npm ci` then `npm run build:storybook` produce a fresh
-`storybook-static/` on the runner. `peaceiris/actions-gh-pages@v4`
-commits that directory to the `storybook` branch with
-`keep_history: true`, so successive deploys appear as a tidy linear
-history. (The action's published name keeps the legacy `gh-pages`
-convention; the destination branch is configurable — we use
-`storybook` to make the branch's purpose self-documenting.)
+**CI side.** The storybook-only steps (`npm run build:storybook` then
+`peaceiris/actions-gh-pages@v4`) are gated on
+`github.event_name == 'push' && github.ref == 'refs/heads/master'`, so
+PR runs and `workflow_dispatch` on non-master branches skip them.
+Storybook failures do not roll back a successful npm publish.
 
 **Pages side.** GitHub Pages serves `storybook` / `(root)` over HTTPS.
 The repo admin sets this once under Settings → Pages; the workflow
@@ -258,6 +293,12 @@ all stories for `m-button` (Variants · primary / secondary / danger,
 Sizes · sm / md / lg, States · disabled / loading, Slots · default /
 icon / both, Form · submit, Theming · custom palette, Event ·
 m-button-click) as they exist at the latest green build of `master`.
+
+**Drift note.** The storybook deploy is now a master-only step inside
+the combined `ci.yml` workflow; there is no longer a standalone
+`.github/workflows/deploy-storybook.yml`. The `peaceiris` recipe and
+the v4-specific `publish_branch: storybook` input (not the v3
+`destination_branch`) are unchanged.
 
 ## Project Build Architecture
 
@@ -400,3 +441,58 @@ same `dist/` works in plain HTML, React 18+, Vue 3.4+, Angular 18+ (with
 artifacts. Per-framework wrappers (`@first-apps/mimi-ui/react`, `/vue`,
 `/angular`) are tracked in [`INTEGRATION.md`](./INTEGRATION.md) and will
 add idiomatic JSX and event-binding DX without changing this build.
+
+## CI/CD pipeline
+
+The single GitHub Actions workflow that gates every PR and ships every
+master push to the npm registry and GitHub Pages.
+
+```
+                            CI/CD PIPELINE
+              ═════════════════════════════════════════
+
+  TRIGGERS                    PIPELINE                       OUTPUTS
+  ────────                    ─────────                       ───────
+
+  ┌──────────────────┐    ┌──────────────────────┐     ┌─────────────────┐
+  │                  │    │                      │     │                 │
+  │  pull_request    │    │  ubuntu-latest       │     │  PR: red/green  │
+  │  push → master   │───▶│  Node 24, 15 min     │     │                 │
+  │  workflow_       │    │  job: pipeline       │     │  Master push:   │
+  │    dispatch      │    │                      │     │   npm publish   │
+  │                  │    │  1. npm ci           │     │   (OIDC)        │
+  └──────────────────┘    │  2. lint             │     │                 │
+                          │  3. format           │     │   storybook     │
+                          │  4. test             │ ───▶│   branch        │
+                          │                      │     │   → GitHub      │
+                          │  ── if master push ──│     │      Pages      │
+                          │                      │     │                 │
+                          │  5. npm publish      │     │                 │
+                          │  6. build:storybook  │     │                 │
+                          │  7. push storybook-  │     │                 │
+                          │     static → branch  │     │                 │
+                          │     (gh-pages@v4)    │     │                 │
+                          └──────────────────────┘     └─────────────────┘
+```
+
+**Triggers.** `pull_request`, `push` to `master`, and
+`workflow_dispatch` (manual). Every PR runs the cheap gate; only
+master pushes (and manual master runs) ship.
+
+**Steps.** A single job (`pipeline`) on `ubuntu-latest`, Node 24, 15
+min timeout. Every run executes `npm ci` → `lint` → `format` → `test`.
+Master pushes add the tail: `npm publish` (via OIDC Trusted
+Publishing) → `build:storybook` → push `storybook-static/` to the
+`storybook` branch via `peaceiris/actions-gh-pages@v4`. The master
+tail is gated on `github.event_name == 'push' && github.ref ==
+'refs/heads/master'`; PR runs and non-master dispatches skip it.
+
+**Credentials & concurrency.** `contents: write` for the storybook
+push, `id-token: write` for npm Trusted Publishing (no `NPM_TOKEN`
+secret — the runner exchanges the OIDC token for an npm auth token at
+publish time). PR runs share a concurrency group keyed by
+`ci-${{ github.ref }}` and can be cancelled when superseded; master
+pushes are **never** cancelled — a half-finished `npm publish` cannot
+be rolled back at the registry. The job runs in the `production`
+GitHub Deployment environment so any reviewer rules or
+environment-scoped secrets apply automatically.
