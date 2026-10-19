@@ -1,6 +1,6 @@
 {
   "name": "@first-apps/mimi-ui",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Reusable web components across JavaScript frameworks",
   "type": "module",
   "license": "MIT",
