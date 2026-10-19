@@ -174,7 +174,7 @@ The `composed: true` flag on every dispatched event is what makes this work — 
 | `npm run preview` | Builds Storybook static and serves it on `http://localhost:6007` for review. |
 | `npm run test` | Run the full Vitest suite once. |
 | `npm run test:watch` | Re-run tests on file change. Use during development. |
-| `npm run build:storybook` | Static Storybook build for deploy (Chromatic, Netlify, etc.). |
+| `npm run build:storybook` | Static Storybook build. Output: `storybook-static/`. Pushed to GitHub Pages via `.github/workflows/deploy-storybook.yml` on every push to `master`. |
 | `npm run lint` | Check for lint errors (Biome). |
 | `npm run lint:fix` | Fix lint errors (Biome). |
 | `npm run format` | Check for code formatting errors (Biome). |
@@ -219,6 +219,11 @@ npm run dev
 ```
 
 Open `http://localhost:6006`. The a11y tab in each story's panel runs axe-core against the rendered component and surfaces violations.
+
+The published Storybook lives at **https://first-apps.github.io/mimi-ui/**.
+It rebuilds on every push to `master` via
+`.github/workflows/deploy-storybook.yml`; see `docs/INTERNAL_ARCHITECTURE.md`
+§"Storybook deploy" for the flow.
 
 **Build for production**
 

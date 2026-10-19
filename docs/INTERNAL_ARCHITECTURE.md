@@ -200,6 +200,63 @@ that's what npmjs.com renders.
 the consumer uses `import` or `require`. TypeScript picks up the `.d.ts`
 files through the `types` condition.
 
+## Storybook deploy
+
+How `master` reaches the public Storybook at
+`https://first-apps.github.io/mimi-ui/`.
+
+```
+                       STORYBOOK DEPLOY PIPELINE
+
+  AUTHOR                       CI (GitHub Actions)                  GITHUB PAGES
+  ──────                       ───────────────────                  ────────────
+                                                              ┌────────────────────┐
+  ┌────────────────┐   push    ┌──────────────────────────┐    │  Settings → Pages  │
+  │  src/ + .story │ ─────────▶ │  workflow: deploy-story  │    │  Source: gh-pages  │
+  │  book/main.ts  │            │  book.yml                │    │  Branch: /(root)   │
+  │                │  workflow  │                          │    └─────────┬──────────┘
+  │                │  _dispatch │  checkout                │              │
+  │                │ ─────────▶ │  setup-node (Node 20)    │              │
+  └────────────────┘            │  npm ci                  │              │
+                                │  npm run build:          │              │
+                                │    storybook             │              │
+                                │  peaceiris/              │              │
+                                │    actions-gh-pages@v4   │              │
+                                │    (push ./storybook-     │              │
+                                │    static → gh-pages)    │              │
+                                └────────────┬─────────────┘              │
+                                             │                            │
+                                             ▼                            ▼
+                                    ┌─────────────────┐         ┌──────────────────────┐
+                                    │  gh-pages branch│         │  first-apps.github.io│
+                                    │  (linear hist.) │ ──────▶ │  /mimi-ui/           │
+                                    └─────────────────┘         └──────────────────────┘
+```
+
+**Author side.** A push to `master` (or a manual `workflow_dispatch`)
+fires `.github/workflows/deploy-storybook.yml`. `contents: write` is
+the only elevated scope; the runner uses `GITHUB_TOKEN`, no long-lived
+secrets.
+
+**CI side.** `npm ci` then `npm run build:storybook` produce a fresh
+`storybook-static/` on the runner. `peaceiris/actions-gh-pages@v4`
+commits that directory to the `gh-pages` branch with
+`keep_history: true`, so successive deploys appear as a tidy linear
+history.
+
+**Pages side.** GitHub Pages serves `gh-pages` / `(root)` over HTTPS.
+The repo admin sets this once under Settings → Pages; the workflow
+itself doesn't touch Pages settings. If Pages is not yet enabled, the
+push to `gh-pages` still succeeds but the public URL 404s until the
+admin step is done.
+
+**Consumer side.** A consumer opening
+`https://first-apps.github.io/mimi-ui/` sees the Storybook shell and
+all stories for `m-button` (Variants · primary / secondary / danger,
+Sizes · sm / md / lg, States · disabled / loading, Slots · default /
+icon / both, Form · submit, Theming · custom palette, Event ·
+m-button-click) as they exist at the latest green build of `master`.
+
 ## Project Build Architecture
 
 How a single TS source produces a framework-agnostic artifact that
