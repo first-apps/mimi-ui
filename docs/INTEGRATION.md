@@ -1,8 +1,9 @@
 # Consumer Integration Plan
 
-> How mimi-ui ships to React, Angular, and Vue consumers. Work in progress —
-> the design system is in scaffolding; this plan is the roadmap to a
-> publishable, multi-framework distribution.
+> How mimi-ui ships to React, Angular, and Vue consumers. The build,
+> packaging, and typing groundwork is in place; the framework wrappers are
+> what remains. This plan is the roadmap to a publishable, multi-framework
+> distribution.
 
 ---
 
@@ -17,11 +18,22 @@
 
 ## Current state
 
-- Source exports `MButton` and other components from `src/index.ts` (vanilla only).
-- `vite build` already runs in library mode and emits ES + CJS to `dist/` (7.24 kB ES / 6.76 kB CJS).
-- `package.json` is `private: true`. No `main`/`module`/`types`/`exports`/`files`/`sideEffects`. Not publishable.
-- No `custom-elements.json`. No framework wrappers. No published type declarations.
+- Source exports `MButton` from `src/index.ts` (vanilla only). `MCounter` and
+  `MClock` were mentioned in earlier revisions of this plan but were never
+  built.
+- `vite build` runs in library mode and emits ES + CJS to `dist/`
+  (5.01 kB ES / 4.71 kB CJS).
+- `package.json` is publishable: `main` / `module` / `types` / `exports` /
+  `files` / `sideEffects` / `customElements` are all declared. Published as
+  `@first-apps/mimi-ui` v1.0.7 via npm Trusted Publishing (OIDC).
+- `custom-elements.json` is generated at build time by
+  `@custom-elements-manifest/analyzer` and shipped at the package root.
+- Type declarations are published (`dist/index.d.ts` plus per-component files).
 - Storybook covers a11y + variants in isolation; no cross-framework smoke tests.
+
+**Steps 1-4 below are complete.** Steps 5-7 (React, Angular, Vue wrappers) are
+not started. The build already reserves their entry slots and output paths — see
+[Distribution shape](#distribution-shape).
 
 ---
 
@@ -29,89 +41,179 @@
 
 Single npm package, subpath exports:
 
-| Subpath | Contents | Use when |
-|---|---|---|
-| `@first-apps/mimi-ui` | Vanilla LitElement classes | Plain HTML, native web-component projects |
-| `@first-apps/mimi-ui/react` | `createComponent`-based React wrappers | React 18+ |
-| `@first-apps/mimi-ui/angular` | Type declarations + `CUSTOM_ELEMENTS_SCHEMA` helpers | Angular 18+ |
-| `@first-apps/mimi-ui/vue` | Typed `defineCustomElement` plugins | Vue 3.4+ |
+| Subpath | Contents | Use when | Status |
+|---|---|---|---|
+| `@first-apps/mimi-ui` | Vanilla LitElement classes | Plain HTML, native web-component projects | **Shipped** |
+| `@first-apps/mimi-ui/react` | `createComponent`-based React wrappers | React 18+ | Reserved — Step 5 |
+| `@first-apps/mimi-ui/angular` | Type declarations + `CUSTOM_ELEMENTS_SCHEMA` helpers | Angular 18+ | Reserved — Step 6 |
+| `@first-apps/mimi-ui/vue` | Typed Vue components | Vue 3.4+ | Reserved — Step 7 |
+| `@first-apps/mimi-ui/custom-elements.json` | The Custom Elements Manifest | IDE tooling, doc generators, wrapper codegen | **Shipped** |
 
-The consumer's bundler resolves each subpath to its own ESM/CJS/types entry, declared via the `exports` map in `package.json`.
+The consumer's bundler resolves each subpath to its own ESM/CJS/types entry,
+declared via the `exports` map in `package.json`.
+
+**A subpath is added to the `exports` map only when its source exists.** Node
+resolves `exports` targets strictly — a subpath pointing at a missing file is a
+hard `ERR_MODULE_NOT_FOUND`, and a package with an `exports` map blocks all
+undeclared deep imports. So the manifest gets an explicit
+`"./custom-elements.json"` entry, and the framework subpaths stay undeclared
+until their implementation lands.
+
+**Output paths are fixed now.** The build reserves
+`dist/react/index.*`, `dist/vue/index.*`, and `dist/angular/index.*` so that
+Steps 5-7 never change the published filename contract:
+
+```
+dist/
+├── mimi-ui.es.js          # vanilla ESM
+├── mimi-ui.cjs            # vanilla CJS  (".cjs" — see Build-level changes)
+├── index.d.ts             # vanilla types
+├── components/m-button/m-button.d.ts
+└── react|vue|angular/    # reserved for Steps 5-7
+```
 
 ---
 
 ## Build-level changes to mimi-ui
 
+Steps 1-4 are implemented. This section describes the as-built shape.
+
 ### 1. Multi-entry Vite library build
 
-The current `vite.config.ts` has a single entry (`src/index.ts`). The new build needs one input per subpath:
+`vite.config.ts` declares an object-form `lib.entry`. The vanilla entry always
+exists; the three framework entries activate only when their source file is
+present:
 
 ```ts
-// vite.lib.config.ts (new)
-build: {
-  lib: {
-    entry: {
-      'index': resolve(__dirname, 'src/index.ts'),
-      'react/index': resolve(__dirname, 'src/react/index.ts'),
-      'angular/index': resolve(__dirname, 'src/angular/index.ts'),
-      'vue/index': resolve(__dirname, 'src/vue/index.ts'),
-    },
-    formats: ['es', 'cjs'],
-    fileName: (format, entryName) => `${entryName}.${format}.js`,
-  },
-  rollupOptions: {
-    external: [/^lit/, /^@lit\//, 'react', 'react-dom', /^@angular\//, 'vue'],
-  },
+const RESERVED_ENTRIES = {
+  'react/index': 'src/react/index.ts',
+  'vue/index': 'src/vue/index.ts',
+  'angular/index': 'src/angular/index.ts',
+} as const;
+
+const entries: Record<string, string> = {
+  index: resolve(import.meta.dirname, 'src/index.ts'),
+};
+
+for (const [name, relativePath] of Object.entries(RESERVED_ENTRIES)) {
+  const absolutePath = resolve(import.meta.dirname, relativePath);
+  if (existsSync(absolutePath)) {
+    entries[name] = absolutePath;
+  }
 }
 ```
 
-Keep a separate `vite.config.ts` for the application-style dev/build that powers Storybook and the demo. A new `npm run build:lib` script invokes the library config.
+**Why the conditional.** Vite fails the whole build with `UNRESOLVED_ENTRY` when
+an entry module does not exist. A hard-coded entry for a not-yet-written
+wrapper would break `npm run build` on every run until Step 5 lands. The
+conditional keeps the reservation: the moment `src/react/index.ts` is written,
+the entry activates under the reserved name with no further config change.
+
+**The `fileName` callback.** Vite passes the entry **key** through verbatim —
+slash included, because Rolldown does not sanitise `/` in object-form input
+names. Returning a path with a slash therefore writes a nested directory:
+
+```ts
+fileName: (format, entryName) => {
+  const base = entryName === 'index' ? 'mimi-ui' : entryName;
+  return format === 'es' ? `${base}.es.js` : `${base}.cjs`;
+},
+```
+
+`index` → `mimi-ui.es.js` / `mimi-ui.cjs`. `react/index` →
+`react/index.es.js` / `react/index.cjs`.
+
+**Why the CJS bundle uses `.cjs`, not `.cjs.js`.** The package is
+`"type": "module"`, so Node ≥ 22.12 parses any `.js` file as ESM. A `.js` file
+containing `require()` and `exports` then resolves to an empty module rather
+than the real named exports — a silent failure where `require()` returns `{}`.
+The `.cjs` extension is the standard fix.
 
 ### 2. Custom Elements Manifest
 
-Add `@custom-elements-manifest/analyzer` (v0.11.0) to the toolchain:
+`@custom-elements-manifest/analyzer` (v0.11.0) runs as a prebuild step
+(`npm run analyze`, wired into `npm run build`). Configuration lives in
+`custom-elements-manifest.config.mjs`:
 
-- Run as a prebuild step (`npm run analyze`).
-- Emits `custom-elements.json` at the package root.
-- The manifest is the source of truth for: type generation, framework wrappers, IDE hints, future auto-generation, Storybook controls.
+```js
+export default {
+  globs: ['src/components/**/m-*.ts'],
+  exclude: ['**/*.test.ts', '**/*.stories.ts'],
+  outdir: '.',
+  litelement: true,
+  packagejson: false,
+};
+```
 
-Wired through `cem` config in `package.json` or a `cem.config.js` (JSDoc + decorator introspection).
+- `litelement: true` is mandatory. Without it the analyzer emits no
+  `tagName`, no `customElement: true`, and no `attributes[]` / `reflects`
+  metadata for `@property` decorators.
+- `packagejson: false` stops the analyzer from rewriting `package.json` as a
+  side effect of the run.
+- The `exclude` list is needed because the analyzer auto-ignores `*.test.ts` and
+  `*.d.ts` but **not** `*.stories.ts`.
+
+**Events require an explicit class-level `@fires` tag.** The analyzer's event
+visitor only inspects method declarations, so an event dispatched from an
+arrow-function property is invisible to it. Each component documents its events
+in JSDoc directly above the class:
+
+```ts
+/**
+ * @fires m-button-click - Fires when the inner `<button>` is activated …
+ */
+@customElement('m-button')
+export class MButton extends LitElement {
+```
+
+The tag must be class-level — a `@fires` tag on a member is not read.
+
+**The manifest is a build artifact.** It is generated by `npm run build` and
+gitignored, so it cannot drift from the component source. `npm run build` must
+run before a manual `npm pack`; the `prepublishOnly` chain guarantees it for
+publishes.
 
 ### 3. TypeScript declaration generation
 
-Consumers need `.d.ts` for typed props, events, and slots. Use `vite-plugin-dts` (v5.1.2) — it runs inside the Vite library build and emits declaration files alongside the JS output, keyed by the same multi-entry map.
+`vite-plugin-dts` (v5.1.2) emits per-file `.d.ts` mirroring the source tree
+inside the Vite library build. The v5 option is `bundleTypes: false` — the
+earlier `rollupTypes` name is a silent no-op.
 
-If a class of type can't be resolved (rare edge cases in Lit decorator typing), fall back to `tsc --emitDeclarationOnly` for the affected entry only.
+Because TypeScript 7 dropped the JavaScript Compiler API that the plugin
+depends on, `@typescript/typescript6` is installed side-by-side as a
+devDependency. Do not remove it.
 
 ### 4. `package.json` publishing surface
 
 ```jsonc
 {
-  "private": false,                          // was: true
-  "main": "./dist/index.cjs.js",
-  "module": "./dist/index.es.js",
+  "main": "./dist/mimi-ui.cjs",
+  "module": "./dist/mimi-ui.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.es.js",
-      "require": "./dist/index.cjs.js"
+      "import": "./dist/mimi-ui.es.js",
+      "require": "./dist/mimi-ui.cjs",
+      "default": "./dist/mimi-ui.es.js"
     },
-    "./react": {
-      "types": "./dist/react/index.d.ts",
-      "import": "./dist/react/index.es.js",
-      "require": "./dist/react/index.cjs.js"
-    },
-    "./angular": { /* same shape */ },
-    "./vue":     { /* same shape */ }
+    "./custom-elements.json": "./custom-elements.json",
+    "./package.json": "./package.json"
   },
-  "files": ["dist", "custom-elements.json", "README.md", "docs/"],
-  "sideEffects": false,                      // critical for tree-shaking
+  "files": ["dist", "custom-elements.json", "LICENSE"],
+  "sideEffects": ["**/*.scss", "**/m-*.ts"],
   "customElements": "./custom-elements.json"
 }
 ```
 
-`sideEffects: false` is the key flag — it tells bundlers they can drop unused exports aggressively. Re-validate after adding CSS-only side-effect imports (none today, but worth checking once a component uses a font or polyfill).
+`types` comes first and `default` last in every condition object — Node
+evaluates conditional-export keys in order.
+
+**`sideEffects` is the array form, not bare `false`.** A bare `false` tells
+bundlers that no module in the package has side effects, which tree-shakes away
+the `@customElement('m-button')` registration call and leaves consumers with an
+unupgraded, unstyled tag. The array form marks the SCSS imports and the
+component modules as side-effectful.
 
 ---
 
@@ -130,9 +232,18 @@ import { MButton as MButtonEl } from '../components/m-button/m-button';
 export const MButton = createComponent({
   tagName: 'm-button',
   elementClass: MButtonEl,
-  events: { onClick: 'm-button-click' as const },
+  events: {
+    onClick: 'm-button-click' as const,
+    onMButtonClick: 'm-button-click' as const,
+  },
 });
 ```
+
+**Scope decision: the wrapper exposes both `onClick` and `onMButtonClick`.**
+`onClick` is the natural React idiom and is what the README's Usage block
+shows; `onMButtonClick` is the component's own namespaced event and carries
+the typed `MButtonClickDetail` payload. A consumer picks whichever reads better
+at the call site — there is no cost to exposing both.
 
 **Consumer-side**: zero config. Vite, Next.js, CRA, Remix — all work out of the box once `@lit/react` is on the consumer's dep tree (peer of mimi-ui). The wrapper exposes the element class as a JSX component with typed props, refs, and event handlers.
 
@@ -140,10 +251,17 @@ export const MButton = createComponent({
 
 ### Angular
 
-Angular's first-class path for custom elements is `CUSTOM_ELEMENTS_SCHEMA`. mimi-ui ships:
+Angular's first-class path for custom elements is `CUSTOM_ELEMENTS_SCHEMA`.
+mimi-ui ships:
 
 1. `.d.ts` files for every component (props, events, slots).
-2. An `angular/index.ts` that re-exports the type declarations and, optionally, registers components via `@angular/elements` for projects that need them as Angular components rather than raw custom elements.
+2. An `angular/index.ts` that re-exports the type declarations and provides a
+   `CUSTOM_ELEMENTS_SCHEMA` helper.
+
+**Scope decision: no `@angular/elements` runtime.** mimi-ui does not ship
+Angular components — only types and the schema helper. The schema lives in
+`@angular/core`, which the consumer already has, so the Angular path stays a
+zero-install experience.
 
 **Consumer-side setup** (one line per module that uses `<m-*>`):
 
@@ -160,20 +278,29 @@ export class FeatureModule {}
 
 ### Vue
 
-Vue 3.4+ has first-class custom element support. **No consumer-side plugin required**.
+Vue 3.4+ has first-class custom element support, so the *baseline* case needs
+no plugin — a consumer can use `<m-button>` directly today.
 
-mimi-ui ships an optional `vue/index.ts` exporting typed `defineCustomElement` plugins for advanced use cases (e.g. consumers who want to alias `<m-button>` to `<AppButton>`):
+**Scope decision: the `/vue` subpath ships a real Vue component**, not a
+`defineCustomElement` plugin. The component takes camelCase props and exposes a
+native `@click`, so the README's Usage block (`<MButton variant="primary"
+@click="onSave">`) is accurate rather than aspirational:
 
-```ts
-import { defineCustomElement } from 'vue';
-import { MButton as MButtonEl } from '@first-apps/mimi-ui';
+```vue
+<script setup lang="ts">
+import { MButton } from '@first-apps/mimi-ui/vue';
+</script>
 
-export const MButton = defineCustomElement({ 'm-button': MButtonEl });
+<template>
+  <MButton variant="primary" @click="onSave">Save</MButton>
+</template>
 ```
 
-**Consumer-side**: zero config for the default case. `v-model` on form-associated elements is built-in. `v-bind`/`v-on` map to props/events. Slots project natively.
+**Consumer-side**: zero config. `v-model` on form-associated elements is
+built-in. Slots project natively.
 
-**TypeScript**: Volar picks up the `.d.ts` from the package's `types` field automatically.
+**TypeScript**: Volar picks up the `.d.ts` from the package's `types` field
+automatically.
 
 ---
 
@@ -183,8 +310,8 @@ export const MButton = defineCustomElement({ 'm-button': MButtonEl });
 |---|---|---|
 | `@custom-elements-manifest/analyzer` (dev) | Generate `custom-elements.json` | Source of truth for types and future auto-generation |
 | `vite-plugin-dts` (dev) | Emit `.d.ts` per entry during library build | Consumer-side type safety without `tsc` |
-| `@lit/react` (peerDep) | `createComponent` for React wrappers | Lit team's official React binding |
-| `@angular/elements` (consumer-side, optional) | Component registration for projects that need it | For projects that want `<m-button>` as an Angular component, not a custom element |
+| `@lit/react` (peerDep, Step 5) | `createComponent` for React wrappers | Lit team's official React binding |
+| `vue` (peerDep, Step 7) | Runtime for the Vue component wrappers | Vue's own runtime |
 
 **Future candidates** (when component count or consumer needs grow):
 - CEM → framework-wrapper auto-generation (eliminate the per-component React wrapper file).
@@ -202,10 +329,10 @@ src/
 │   ├── index.ts                # Re-exports all React wrappers
 │   └── m-button.ts             # One wrapper per component
 ├── angular/
-│   ├── index.ts                # Type re-exports + registration helpers
-│   └── m-button.ts             # Optional: define-component helpers
+│   ├── index.ts                # Type re-exports + CUSTOM_ELEMENTS_SCHEMA helper
+│   └── m-button.ts             # Optional: per-component type re-exports
 ├── vue/
-│   ├── index.ts                # defineCustomElement plugins
+│   ├── index.ts                # Vue component wrappers
 │   └── m-button.ts
 ├── components/                 # Source (unchanged)
 │   └── m-<name>/
@@ -218,7 +345,7 @@ src/
     └── _mixins.scss
 ```
 
-Each framework folder maps to one entry in Vite's library build. The current `src/index.ts` continues to be the vanilla entry — framework folders are purely additive.
+Each framework folder maps to one entry in Vite's library build. The current `src/index.ts` continues to be the vanilla entry — framework folders are purely additive. A framework folder activates its build entry the moment its `index.ts` is created; see [Build-level changes](#build-level-changes-to-mimi-ui).
 
 ---
 
@@ -238,16 +365,16 @@ The third layer catches regressions like "Lit works but the React wrapper lost t
 
 Smallest surface to largest:
 
-1. **Vite library mode + multi-entry build** — vanilla works as a real package.
-2. **`custom-elements.json` via the analyzer** — unblocks types for steps 3-6.
-3. **`vite-plugin-dts` + `.d.ts` outputs** — all framework consumers get typed props/events.
-4. **`package.json` publishing surface** — `private: false`, `exports` map, `files`, `sideEffects: false`, `customElements` field.
+1. **Vite library mode + multi-entry build** — vanilla works as a real package. **Done.**
+2. **`custom-elements.json` via the analyzer** — unblocks types for steps 3-6. **Done.**
+3. **`vite-plugin-dts` + `.d.ts` outputs** — all framework consumers get typed props/events. **Done.**
+4. **`package.json` publishing surface** — `exports` map, `files`, `sideEffects`, `customElements` field. **Done.**
 5. **React wrappers** — biggest payoff (most React users; biggest DX gap vs raw custom elements).
 6. **Angular `CUSTOM_ELEMENTS_SCHEMA` types + helpers** — small surface.
-7. **Vue typed plugin** — smallest, because Vue already supports custom elements natively.
+7. **Vue typed component** — small surface, because Vue already supports custom elements natively.
 8. **Cross-framework Playwright tests** — once consumers are using the wrappers.
 
-Steps 1-4 are prerequisites for any framework work. Steps 5-7 are parallelizable. Step 8 is a follow-up after at least one framework integration is in production.
+Steps 1-4 are prerequisites for any framework work, and they are complete. Steps 5-7 are parallelizable. Step 8 is a follow-up after at least one framework integration is in production.
 
 ---
 
@@ -256,4 +383,4 @@ Steps 1-4 are prerequisites for any framework work. Steps 5-7 are parallelizable
 - **SSR / hydration.** Add `lit-ssr` when a consumer reports a real SSR need; the current SPA-only assumption is fine for v1.
 - **Visual diffing between frameworks.** Same component rendered in React vs Vue should look identical; Chromatic's per-story snapshot covers this implicitly, but no cross-framework diff is set up.
 - **Monorepo split.** Today this is a single package. Splitting the React wrappers into `@first-apps/mimi-ui-react` only pays off if consumers want to install React/Angular/Vue independently. Not now.
-- **Auto-generated wrappers from CEM.** Manual wrappers are fine at this scale; revisit when count crosses ~10.
+- **Auto-generated wrappers from CEM.** Manual wrappers are fine at this scale; revisit when count crosses ~10. The class-level `@fires` JSDoc tags added in Step 2 are the prerequisite — without them the manifest carries no `events[]` and codegen emits no event props.

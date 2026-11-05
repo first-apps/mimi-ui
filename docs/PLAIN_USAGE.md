@@ -29,7 +29,7 @@ the snippets below are the working defaults.
 | Framework       | Without wrappers                                                                       |
 | --------------- | -------------------------------------------------------------------------------------- |
 | Plain HTML      | Identical to README.                                                                   |
-| React 18+       | Lowercase event names (`onm-button-click`), `<m-button>` not `<MButton>`.             |
+| React 18+       | Lowercase event names (`onm-button-click`), `<m-button>` not `<MButton>`.              |
 | Vue 3.4+        | Native element auto-detected; event listeners use `@m-button-click`.                   |
 | Angular 18+     | One-time `CUSTOM_ELEMENTS_SCHEMA` per component.                                       |
 | Svelte 5        | Native element works; events use `onm-button-click={…}`.                               |
