@@ -104,8 +104,15 @@ function onSave(e: CustomEvent) {
 </template>
 ```
 
-`v-model` works on form-associated elements (`<m-button type="text">` and
-similar) without extra wiring.
+`v-model` does **not** work on a custom element without extra wiring. Vue's
+`v-model` needs the component to implement Vue's own `defineModel` contract;
+it does not read `ElementInternals`. A form-associated element does
+participate in **native** `<form>` submission and `new FormData(form)`, but
+that is the browser's mechanism, not Vue's.
+
+For the typed Vue component, use
+[`@first-apps/mimi-ui/vue`](./INTEGRATION.md#vue) instead — it accepts
+camelCase props and exposes a native `@click`.
 
 ---
 
@@ -143,6 +150,24 @@ For module-based apps:
 })
 class AppModule {}
 ```
+
+**Import the schema from `@angular/core`, not from a mimi-ui helper.**
+Angular's AOT compiler validates `schemas` structurally, by symbol identity —
+a wrapper array constant breaks the build.
+
+**Angular does not type-check custom elements.** Under
+`CUSTOM_ELEMENTS_SCHEMA` any dash-containing tag is accepted, so `<m-buton>`
+and `[notAProp]` compile silently. The `.d.ts` files help your editor, not
+the compiler.
+
+**`ngModel` / `formControl` need a `ControlValueAccessor`.** Angular's forms
+API never reads `ElementInternals`. A form-associated element participates in
+**native** `<form>` submission and `new FormData(form)`, but binding it to an
+Angular form control requires an adapter directive that this library does not
+ship.
+
+**Property binding works.** `[variant]="x"` sets the DOM property (which is
+what Lit reads); a static `variant="x"` sets the attribute.
 
 ---
 
@@ -191,14 +216,14 @@ button.addEventListener('m-button-click', (e) => {
 
 ## What comes next
 
-The wrappers will land in this order, per
+The framework subpaths now ship, per
 [`INTEGRATION.md`](./INTEGRATION.md):
 
-1. `vite.lib.config.ts` multi-entry build (Step 1)
-2. `@first-apps/mimi-ui/react` via `@lit/react`'s `createComponent` (Step 5)
-3. `@first-apps/mimi-ui/angular` with type augmentation (Step 6)
-4. `@first-apps/mimi-ui/vue` typed `defineCustomElement` plugin (Step 7)
+1. `@first-apps/mimi-ui/react` — React 18+ / 19, via `@lit/react`'s `createComponent`
+2. `@first-apps/mimi-ui/vue` — Vue 3.4+, a real Vue component with camelCase props
+3. `@first-apps/mimi-ui/angular` — Angular 18+, type declarations only (no runtime import)
 
-Until those land, the snippets on this page are the supported way to
-consume mimi-ui. They are not a fallback — they're the same Web
-Components the wrappers will sit on top of.
+The snippets on this page remain the supported way to use the raw custom
+elements. They are not a fallback — they're the same Web Components the
+wrappers sit on top of. Prefer the wrapper subpath when you want typed props
+and framework-idiomatic event handlers.

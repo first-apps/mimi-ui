@@ -44,9 +44,9 @@ Single npm package, subpath exports:
 | Subpath | Contents | Use when | Status |
 |---|---|---|---|
 | `@first-apps/mimi-ui` | Vanilla LitElement classes | Plain HTML, native web-component projects | **Shipped** |
-| `@first-apps/mimi-ui/react` | `createComponent`-based React wrappers | React 18+ | Reserved — Step 5 |
-| `@first-apps/mimi-ui/angular` | Type declarations + `CUSTOM_ELEMENTS_SCHEMA` helpers | Angular 18+ | Reserved — Step 6 |
-| `@first-apps/mimi-ui/vue` | Typed Vue components | Vue 3.4+ | Reserved — Step 7 |
+| `@first-apps/mimi-ui/react` | `createComponent`-based React wrappers | React 18+ | **Shipped** |
+| `@first-apps/mimi-ui/angular` | Type declarations (no runtime import) | Angular 18+ | **Shipped** |
+| `@first-apps/mimi-ui/vue` | Vue component wrappers | Vue 3.4+ | **Shipped** |
 | `@first-apps/mimi-ui/custom-elements.json` | The Custom Elements Manifest | IDE tooling, doc generators, wrapper codegen | **Shipped** |
 
 The consumer's bundler resolves each subpath to its own ESM/CJS/types entry,
@@ -221,33 +221,69 @@ component modules as side-effectful.
 
 ### React
 
-**Wrapper generation: manual, one wrapper per component**, using `@lit/react`'s `createComponent` (v1.0.8). Rationale: at the current surface (3 components) manual wrappers keep types tight, the diff between vanilla and React intentional, and the dependency on a CEM-analyzer → wrapper codegen tool unnecessary. Re-evaluate auto-generation once component count crosses ~10.
+**Wrapper generation: manual, one wrapper per component**, using `@lit/react`'s `createComponent` (v1.0.8). Rationale: at the current surface (1 component) manual wrappers keep types tight, the diff between vanilla and React intentional, and the dependency on a CEM-analyzer → wrapper codegen tool unnecessary. Re-evaluate auto-generation once component count crosses ~10.
 
 Wrapper file pattern (`src/react/m-button.ts`):
 
 ```ts
-import { createComponent } from '@lit/react';
-import { MButton as MButtonEl } from '../components/m-button/m-button';
+import * as React from 'react';
+import { createComponent, type EventName } from '@lit/react';
+
+import { MButton as MButtonElement } from '../components/m-button/m-button';
+import type { MButtonClickDetail } from '../index';
 
 export const MButton = createComponent({
+  react: React,
   tagName: 'm-button',
-  elementClass: MButtonEl,
+  elementClass: MButtonElement,
   events: {
-    onClick: 'm-button-click' as const,
-    onMButtonClick: 'm-button-click' as const,
+    onMButtonClick: 'm-button-click' as EventName<CustomEvent<MButtonClickDetail>>,
   },
 });
 ```
 
-**Scope decision: the wrapper exposes both `onClick` and `onMButtonClick`.**
-`onClick` is the natural React idiom and is what the README's Usage block
-shows; `onMButtonClick` is the component's own namespaced event and carries
-the typed `MButtonClickDetail` payload. A consumer picks whichever reads better
-at the call site — there is no cost to exposing both.
+**Two event props, two independent sources.**
+
+| Prop | Source | Payload |
+|---|---|---|
+| `onClick` | React's native synthetic-event path (NOT in the `events` map) | React `SyntheticEvent` |
+| `onMButtonClick` | `@lit/react` listener bound to the `m-button-click` event | `CustomEvent<MButtonClickDetail>` |
+
+**Why `onClick` is deliberately NOT mapped.** `@lit/react` keys its listener
+registry by **event name** in a `WeakMap<Element, Map<eventName, handler>>`.
+A second prop mapping to the same event name executes
+`handler.handleEvent = listener`, silently **overwriting** the first
+handler. Verified against `@lit/react@1.0.8`:
+
+```
+setting onClick -> event "m-button-click"
+setting onMButtonClick -> event "m-button-click"
+listeners registered on node: 1
+dispatching m-button-click...
+  onMButtonClick fired        ← onClick was SILENTLY DROPPED
+```
+
+Mapping `onClick` to `m-button-click` would therefore hand the prop to
+`@lit/react` instead of React, and React would never install it — the
+consumer's `onClick` would be dead. Leaving it unmapped keeps it an ordinary
+React synthetic handler: the component's inner `<button>` click is
+`composed`, escapes the shadow root, and the browser retargets it to the
+`<m-button>` host, where React's delegated listener finds it.
+
+**The `react` option is required.** `@lit/react@1.x` imports nothing itself
+and expects the consumer's React module. The wrapper passes
+`import * as React from 'react'`.
 
 **Consumer-side**: zero config. Vite, Next.js, CRA, Remix — all work out of the box once `@lit/react` is on the consumer's dep tree (peer of mimi-ui). The wrapper exposes the element class as a JSX component with typed props, refs, and event handlers.
 
-**Required consumer deps**: `@lit/react` (peer of mimi-ui), `react` ≥ 18, `react-dom` ≥ 18.
+**Required consumer deps**: `@lit/react` (peer of mimi-ui), `react` ≥ 18, `react-dom` ≥ 18. React 18 and 19 are both supported.
+
+**Ref forwarding.** `ref={useRef<MButton>(null)}` resolves to the `MButton`
+element instance.
+
+**Type inference.** `ElementProps<I> = Partial<Omit<I, keyof HTMLElement>>`
+— `variant` is typed as the `MButtonVariant` union, and every prop is
+optional.
 
 ### Angular
 
@@ -255,13 +291,61 @@ Angular's first-class path for custom elements is `CUSTOM_ELEMENTS_SCHEMA`.
 mimi-ui ships:
 
 1. `.d.ts` files for every component (props, events, slots).
-2. An `angular/index.ts` that re-exports the type declarations and provides a
-   `CUSTOM_ELEMENTS_SCHEMA` helper.
+2. An `angular/index.ts` that re-exports the type declarations.
 
-**Scope decision: no `@angular/elements` runtime.** mimi-ui does not ship
-Angular components — only types and the schema helper. The schema lives in
-`@angular/core`, which the consumer already has, so the Angular path stays a
+**Scope decision: no `@angular/elements` runtime, and the subpath is
+type-only.** mimi-ui does not ship Angular components. The `angular/index.ts`
+module has **no runtime import** of `@angular/core`, so `@angular/core` is a
+devDependency (for `tsc`) rather than a peer — the Angular path stays a
 zero-install experience.
+
+**The `CUSTOM_ELEMENTS_SCHEMA` helper is a type re-export, not a schema
+constant.** Angular's AOT compiler validates the `schemas` array
+*structurally, by symbol identity*: `extractSchemas` requires each entry to
+be a reference whose `ownedByModuleGuess === '@angular/core'` and whose
+identifier is named `CUSTOM_ELEMENTS_SCHEMA` / `NO_ERRORS_SCHEMA`. A wrapper
+constant (e.g. `export const MIMI_UI_SCHEMA = [CUSTOM_ELEMENTS_SCHEMA]`)
+fails with *"Component.schemas must be an array"*, and a nested array
+(`schemas: [[CUSTOM_ELEMENTS_SCHEMA]]`) is a compile error — `schemas` is
+not flattened the way `imports` is.
+
+So consumers import the schema from `@angular/core` directly:
+
+```ts
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+
+@Component({
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  /* ... */
+})
+export class FeatureComponent {}
+```
+
+**Angular does not type-check custom elements.** Under
+`CUSTOM_ELEMENTS_SCHEMA`, the schema registry accepts *any* dash-containing
+tag. Angular never reads the component's `.d.ts`, so a typo like
+`<m-buton>` — or a bogus `[notAProp]` binding — compiles silently. The
+exported types help your IDE, not the Angular compiler.
+
+**Property vs attribute binding.** `[variant]="x"` goes through
+`ɵɵdomProperty` → `el[name] = value`, so it sets the DOM **property** —
+which is what Lit reads. A static `variant="x"` takes the attribute path.
+There is no boolean trap here: `[disabled]="false"` sets the property to
+`false` and Lit removes the attribute.
+
+**Forms: what is and is not true.** `attachInternals()` makes the element
+participate in **native** `<form>` submission and `new FormData(form)`.
+Angular's `ngModel` / `formControl` are a different mechanism — they
+require a `ControlValueAccessor` adapter and throw
+`NG_MISSING_VALUE_ACCESSOR` without one. Angular's forms API never reads
+`ElementInternals`. A CVA adapter is a runtime Angular artifact and is out
+of scope for this subpath.
+
+**No compiler-side support.** Angular's `angularElements` transform and its
+`experimental-full` compilation mode are gone in Angular 22, and lit-element
+compiler support was never shipped. Template type-checking of `<m-*>` props
+is not available.
+
 
 **Consumer-side setup** (one line per module that uses `<m-*>`):
 
@@ -272,8 +356,6 @@ import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 export class FeatureModule {}
 ```
 
-**NgModel / Reactive Forms integration**: any `<m-input>` that sets `static formAssociated = true` and calls `attachInternals()` participates in `<form>` submission automatically. Angular's `ngModel` reads through `ElementInternals` without extra wiring.
-
 **Build plugin (if consumer publishes a library)**: `ng-packagr` with `customElements: 'valid'` so its template schema check accepts `<m-*>` tags. Documented in the consumer's `ng-package.json` snippet, not mimi-ui's.
 
 ### Vue
@@ -282,9 +364,11 @@ Vue 3.4+ has first-class custom element support, so the *baseline* case needs
 no plugin — a consumer can use `<m-button>` directly today.
 
 **Scope decision: the `/vue` subpath ships a real Vue component**, not a
-`defineCustomElement` plugin. The component takes camelCase props and exposes a
-native `@click`, so the README's Usage block (`<MButton variant="primary"
-@click="onSave">`) is accurate rather than aspirational:
+`defineCustomElement` plugin. Vue's `defineCustomElement` wraps a Vue
+component *into* a custom element — the inverse of what's needed here. The
+wrapper takes camelCase props and exposes a native `@click`, so the README's
+Usage block (`<MButton variant="primary" @click="onSave">`) is accurate
+rather than aspirational:
 
 ```vue
 <script setup lang="ts">
@@ -296,11 +380,51 @@ import { MButton } from '@first-apps/mimi-ui/vue';
 </template>
 ```
 
-**Consumer-side**: zero config. `v-model` on form-associated elements is
-built-in. Slots project natively.
+**How props reach the element.** Vue's `shouldSetAsProp()` (runtime-dom)
+decides between property and attribute with `return key in el`. Lit's
+`@property` defines accessors on the **prototype**, so for an upgraded
+element `'variant' in el` is true and Vue assigns the DOM **property** —
+exactly what Lit reads. The wrapper therefore uses camelCase prop keys
+matching the Lit property names. Kebab-case keys would fail the `in` check
+and fall back to `setAttribute()`.
 
-**TypeScript**: Volar picks up the `.d.ts` from the package's `types` field
-automatically.
+**The boolean trap, and the guard.** If the element is *not* upgraded when
+Vue creates it, `'disabled' in el` is false, Vue takes the attribute path,
+and `disabled: false` becomes the attribute `disabled="false"`. Lit's
+Boolean converter is `value !== null`, so it reads that as **TRUE** — a
+silently broken button. The wrapper's side-effect import of the component
+module guarantees `<m-button>` is registered before Vue creates one.
+
+Plain prop keys (not Vue's `.prop` modifier) are used deliberately: `.prop`
+forces the property path unconditionally, and on an un-upgraded element that
+would create an *own* property shadowing Lit's prototype accessor on
+upgrade, so the setter would never run.
+
+**Slots.** The wrapper forwards both the default slot and the named `icon`
+slot. The icon content is rendered as a **child vnode** carrying
+`slot: 'icon'` — Vue's `normalizeChildren()` flattens a slots object to its
+`default` key for ELEMENT vnodes, so passing `{ default, icon }` would
+silently drop the icon.
+
+```vue
+<MButton variant="primary">
+  <template #icon><span aria-hidden="true">★</span></template>
+  Add to favorites
+</MButton>
+```
+
+**Events.** `@click` maps to the native click; `m-button-click` is emitted
+as its own event with the typed detail. Both have identical firing
+conditions — a disabled or loading button produces neither.
+
+**Consumer-side**: zero config. **TypeScript**: Volar picks up the `.d.ts`
+from the subpath's `types` condition automatically.
+
+**`v-model` caveat**: `v-model` works on native `<form>` submission for
+form-associated elements, but Vue's `v-model` on a custom element requires
+the component to implement Vue's `defineModel` contract. It does not read
+`ElementInternals`.
+
 
 ---
 
@@ -369,12 +493,21 @@ Smallest surface to largest:
 2. **`custom-elements.json` via the analyzer** — unblocks types for steps 3-6. **Done.**
 3. **`vite-plugin-dts` + `.d.ts` outputs** — all framework consumers get typed props/events. **Done.**
 4. **`package.json` publishing surface** — `exports` map, `files`, `sideEffects`, `customElements` field. **Done.**
-5. **React wrappers** — biggest payoff (most React users; biggest DX gap vs raw custom elements).
-6. **Angular `CUSTOM_ELEMENTS_SCHEMA` types + helpers** — small surface.
-7. **Vue typed component** — small surface, because Vue already supports custom elements natively.
+5. **React wrappers** — biggest payoff (most React users; biggest DX gap vs raw custom elements). **Done.**
+6. **Angular type re-exports** — small surface. **Done.**
+7. **Vue component wrapper** — small surface, because Vue already supports custom elements natively. **Done.**
 8. **Cross-framework Playwright tests** — once consumers are using the wrappers.
 
 Steps 1-4 are prerequisites for any framework work, and they are complete. Steps 5-7 are parallelizable. Step 8 is a follow-up after at least one framework integration is in production.
+
+**The framework subpaths are not independent.** They share one build, one
+`custom-elements.json`, and — critically — one registration of `<m-button>`.
+Vite's library mode emits a shared chunk for any module two or more entries
+import, so `customElements.define` is evaluated once no matter how many
+subpaths a consumer loads. Do not disable code splitting to "clean up" the
+output: Rolldown rejects a multi-input build with `inlineDynamicImports`, and
+per-entry builds would duplicate the component and throw
+`NotSupportedError` at runtime.
 
 ---
 
