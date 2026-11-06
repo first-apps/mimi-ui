@@ -1,7 +1,7 @@
 {
   "name": "@first-apps/mimi-ui",
-  "version": "1.0.7",
-  "description": "Reusable web components across JavaScript frameworks",
+  "version": "1.0.8",
+  "description": "Reusable web components across any JavaScript frameworks",
   "type": "module",
   "license": "MIT",
   "author": "@dikshit-n",
@@ -30,32 +30,76 @@
   ],
   "files": [
     "dist",
+    "custom-elements.json",
     "LICENSE"
   ],
   "sideEffects": [
     "**/*.scss",
-    "**/m-*.ts"
+    "**/m-*.ts",
+    "dist/**/*.js",
+    "dist/**/*.cjs"
   ],
-  "main": "./dist/mimi-ui.cjs.js",
+  "main": "./dist/mimi-ui.cjs",
   "module": "./dist/mimi-ui.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/mimi-ui.es.js",
-      "require": "./dist/mimi-ui.cjs.js",
+      "require": "./dist/mimi-ui.cjs",
       "default": "./dist/mimi-ui.es.js"
     },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.es.js",
+      "require": "./dist/react/index.cjs",
+      "default": "./dist/react/index.es.js"
+    },
+    "./vue": {
+      "types": "./dist/vue/index.d.ts",
+      "import": "./dist/vue/index.es.js",
+      "require": "./dist/vue/index.cjs",
+      "default": "./dist/vue/index.es.js"
+    },
+    "./angular": {
+      "types": "./dist/angular/index.d.ts",
+      "import": "./dist/angular/index.es.js",
+      "require": "./dist/angular/index.cjs",
+      "default": "./dist/angular/index.es.js"
+    },
+    "./custom-elements.json": "./custom-elements.json",
     "./package.json": "./package.json"
   },
+  "peerDependencies": {
+    "@lit/react": "^1.0.0",
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19",
+    "vue": "^3.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@lit/react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
+  },
+  "customElements": "./custom-elements.json",
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "dev": "npm run build:storybook && storybook dev -p 6006",
-    "build": "tsc && vite build --mode production",
-    "build:dev": "tsc && vite build --mode development --outDir dist-dev",
-    "build:prod": "tsc && vite build --mode production",
+    "analyze": "cem analyze",
+    "build": "npm run analyze && tsc && vite build --mode production",
+    "build:dev": "npm run analyze && tsc && vite build --mode development --outDir dist-dev",
+    "build:prod": "npm run build",
     "preview": "npm run build:storybook && vite preview --outDir storybook-static --port 6007 --strictPort",
     "clean": "rm -rf dist dist-dev storybook-static",
     "test": "vitest run",
@@ -71,19 +115,27 @@
     "lit": "^3.2.0"
   },
   "devDependencies": {
+    "@angular/core": "^22.2.4",
     "@axe-core/playwright": "^4.14.0",
     "@biomejs/biome": "^2.5.15",
+    "@custom-elements-manifest/analyzer": "^0.11.0",
+    "@lit/react": "^1.0.8",
     "@storybook/addon-a11y": "^10.6.2",
     "@storybook/addon-docs": "^10.6.2",
     "@storybook/web-components-vite": "^10.6.2",
     "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@typescript/typescript6": "^6.0.2",
     "happy-dom": "^21.0.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "sass": "^1.105.2",
     "storybook": "^10.6.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
     "vite-plugin-dts": "^5.1.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "vue": "^3.5.45"
   }
 }

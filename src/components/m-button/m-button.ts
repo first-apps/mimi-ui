@@ -56,6 +56,18 @@ export interface MButtonClickDetail {
  */
 export type { MButtonClickDetail as MButtonClickEventDetail };
 
+/**
+ * A themed, form-aware button built on a real `<button>` element.
+ *
+ * @fires m-button-click - Fires when the inner `<button>` is activated and the
+ *   component is neither disabled nor loading. `composed: true, bubbles: true`.
+ *   The `detail` payload is typed as `MButtonClickDetail`.
+ *
+ * @slot - Button label.
+ * @slot icon - Leading icon (e.g. `<span slot="icon">★</span>`).
+ * @csspart button - The inner `<button>` element.
+ * @csspart spinner - The loading spinner (rendered only while `loading`).
+ */
 @customElement('m-button')
 export class MButton extends LitElement {
   /** Form-associated custom element. Opts into `attachInternals()` and the

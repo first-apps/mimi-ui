@@ -320,7 +320,10 @@ consumers can import from any framework that supports Custom Elements.
   |   |     ├── m-*.stories.ts
   │   |     └── ...
   |   └── ...
-  └── index.ts
+  ├── index.ts
+  ├── react/    (reserved — step 5)
+  ├── vue/      (reserved — step 7)
+  └── angular/  (reserved — step 6)
             │
             ▼
   2. VALIDATION GATE
@@ -343,7 +346,14 @@ consumers can import from any framework that supports Custom Elements.
                   ┌────────────────────────────┐
                   │ Vite — Library Mode        │
                   │                            │
-                  │ Entry: src/index.ts        │
+                  │ Entries:                   │
+                  │ • src/index.ts             │
+                  │ • src/react/index.ts  *    │
+                  │ • src/vue/index.ts    *    │
+                  │ • src/angular/index.ts *   │
+                  │                            │
+                  │ * active only when the     │
+                  │   source file exists       │
                   │                            │
                   │ Transforms:                │
                   │ • TypeScript → JavaScript  │
@@ -351,11 +361,12 @@ consumers can import from any framework that supports Custom Elements.
                   │ • Bundles modules          │
                   │                            │
                   │ Output formats:            │
-                  │ • ES Modules (ESM)         │
-                  │ • CommonJS (CJS)           │
+                  │ • ES Modules (.es.js)      │
+                  │ • CommonJS (.cjs)          │
                   │                            │
                   │ External dependencies:     │
-                  │ • /^lit/                   │
+                  │ • /^lit/  • react  • vue   │
+                  │ • /^@angular\//            │
                   └──────────────┬─────────────┘
                                  │
                    ┌─────────────┴─────────────┐
@@ -378,13 +389,15 @@ consumers can import from any framework that supports Custom Elements.
   ─────────────────────────────────
   dist/
   ├── mimi-ui.es.js
-  ├── mimi-ui.cjs.js
-  ├── style.css* 
+  ├── mimi-ui.cjs
   ├── index.d.ts
-  └── components/
-      ├── m-*/
-      |     ├── m-*.d.ts
-      └── ...
+  ├── components/
+  │   ├── m-*/
+  |     ├── m-*.d.ts
+  │   └── ...
+  └── react|vue|angular/   (reserved)
+
+  + custom-elements.json   (repo root, generated)
 
                   │
                   ▼
@@ -398,8 +411,8 @@ consumers can import from any framework that supports Custom Elements.
   │ • module   → ESM entry              │
   │ • types    → declaration entry      │
   │ • exports  → public entry points    │
-  │ • peerDependencies → lit            │
-  │ • files    → dist/                  │
+  │ • customElements → manifest        │
+  │ • files    → dist/ + manifest       │
   └──────────────────┬──────────────────┘
                      │
                      ▼

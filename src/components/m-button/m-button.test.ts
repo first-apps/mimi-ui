@@ -16,36 +16,9 @@ import type { LitElement } from 'lit';
 import type { MButton, MButtonVariant, MButtonSize } from './m-button';
 import './m-button'; // side-effect: registers the custom element
 
-// happy-dom doesn't yet ship `ElementInternals`. We stub it just well enough
-// for `m-button`'s form-association surface to work in tests:
-//   - `.form` resolves to the nearest <form> ancestor, mirroring the
-//     browser's behavior (the browser auto-associates form-associated
-//     custom elements with the form they're inserted into).
-// Everything else is unused by `m-button` so it's left undefined.
-if (
-  typeof (HTMLElement.prototype as { attachInternals?: () => ElementInternals }).attachInternals !==
-  'function'
-) {
-  (HTMLElement.prototype as { attachInternals: () => ElementInternals }).attachInternals =
-    function (this: HTMLElement): ElementInternals {
-      const host = this;
-      const internals: Record<string | symbol, unknown> = {};
-      Object.defineProperty(internals, 'form', {
-        configurable: true,
-        get(): HTMLFormElement | null {
-          let node: HTMLElement | null = host;
-          while (node) {
-            if (node.tagName === 'FORM') {
-              return node as HTMLFormElement;
-            }
-            node = node.parentElement ?? (node.parentNode as HTMLElement | null);
-          }
-          return null;
-        },
-      });
-      return internals as unknown as ElementInternals;
-    };
-}
+// happy-dom doesn't ship `ElementInternals`. The shared stub in
+// vitest.setup.ts provides it — `.form` resolves to the nearest <form>
+// ancestor, mirroring the browser. See docs/COMPONENT_STANDARDS.md §9.
 
 const flush = (el: LitElement): Promise<void> => el.updateComplete.then(() => undefined);
 

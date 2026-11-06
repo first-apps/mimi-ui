@@ -69,9 +69,9 @@ your stack — every entrypoint is a regular import, no bundler plugin needed.
   </p>
 </div>
 
-> Currently shipping: vanilla web-components (`@first-apps/mimi-ui`). For
-> today's React/Vue/Angular usage with native custom elements, see
-> [Plain usage](./docs/PLAIN_USAGE.md).
+> Four entrypoints ship: the vanilla web-components (`@first-apps/mimi-ui`),
+> plus React, Vue, and Angular wrappers. For the raw custom elements without
+> a wrapper, see [Plain usage](./docs/PLAIN_USAGE.md).
 
 ### Plain HTML
 
@@ -101,6 +101,20 @@ export function SaveButton() {
 }
 ```
 
+`onClick` is the native click. Use `onMButtonClick` for the component's own
+event, which carries a typed payload:
+
+```tsx
+import { MButton, type MButtonClickDetail } from '@first-apps/mimi-ui/react';
+
+<MButton
+  variant="primary"
+  onMButtonClick={(e: CustomEvent<MButtonClickDetail>) => {
+    // e.detail.source → the <m-button> element
+  }}
+/>;
+```
+
 ### Vue 3.4+
 
 ```vue
@@ -117,15 +131,25 @@ function onSave() {
 </template>
 ```
 
+The `icon` slot is forwarded too:
+
+```vue
+<MButton variant="primary">
+  <template #icon><span aria-hidden="true">★</span></template>
+  Add to favorites
+</MButton>
+```
+
 ### Angular 18+
 
 ```ts
-import { Component } from '@angular/core';
-import { MButton } from '@first-apps/mimi-ui/angular';
+import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import '@first-apps/mimi-ui';
 
 @Component({
   selector: 'app-save',
   standalone: true,
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `<m-button variant="primary" (click)="onSave()">Save</m-button>`,
 })
 export class SaveComponent {
